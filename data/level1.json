@@ -23,7 +23,9 @@
         { "x": 6, "y": 3, "type": "normal", "orientation": "vertical" },
         { "x": 8, "y": 11, "type": "normal", "orientation": "horizontal" }
     ],
-    "pushwalls": [],
+    "pushwalls": [
+        { "x": 4, "y": 9, "textureId": 4 }
+    ],
     "entities": [
         { "type": "item", "subtype": "ammo_clip", "x": 3, "y": 1 },
         { "type": "item", "subtype": "medkit", "x": 5, "y": 5 },

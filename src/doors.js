@@ -8,6 +8,7 @@ export class DoorManager {
         this.renderer = renderer;
         this.map = map;
         this.doors = [];
+        this.pushwalls = [];
     }
 
     init(doorData) {
@@ -103,5 +104,61 @@ export class DoorManager {
 
     isDoorTile(x, y) {
         return this.doors.some(d => d.x === x && d.y === y);
+    }
+
+    initPushwalls(pushwallData) {
+        this.pushwalls = [];
+        for (const pw of pushwallData) {
+            this.pushwalls.push({
+                x: pw.x,
+                y: pw.y,
+                textureId: pw.textureId,
+                state: 'closed',
+                progress: 0,
+                mesh: null,
+                dirX: 0,
+                dirZ: 0,
+            });
+        }
+    }
+
+    tryPushWall(player) {
+        const lookX = player.x + Math.cos(player.angle) * 1.5;
+        const lookZ = player.z - Math.sin(player.angle) * 1.5;
+        const tileX = Math.floor(lookX / TILE_SIZE);
+        const tileZ = Math.floor(lookZ / TILE_SIZE);
+
+        for (const pw of this.pushwalls) {
+            if (pw.x === tileX && pw.y === tileZ && pw.state === 'closed') {
+                const dx = tileX + 0.5 - player.x / TILE_SIZE;
+                const dz = tileZ + 0.5 - player.z / TILE_SIZE;
+
+                if (Math.abs(dx) > Math.abs(dz)) {
+                    pw.dirX = dx > 0 ? 1 : -1;
+                    pw.dirZ = 0;
+                } else {
+                    pw.dirX = 0;
+                    pw.dirZ = dz > 0 ? 1 : -1;
+                }
+
+                pw.state = 'moving';
+                return 'secret';
+            }
+        }
+        return null;
+    }
+
+    updatePushwalls(dt) {
+        for (const pw of this.pushwalls) {
+            if (pw.state !== 'moving') continue;
+
+            pw.progress += dt * 0.5;
+            if (pw.progress >= 2.0) {
+                pw.progress = 2.0;
+                pw.state = 'open';
+            }
+
+            this.map.walls[pw.y][pw.x] = 0;
+        }
     }
 }
