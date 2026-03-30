@@ -4,13 +4,13 @@ import { WALL_HEIGHT, PLAYER_HEIGHT, FLOOR_COLOR, CEILING_COLOR, MAP_SIZE, TILE_
 export class Renderer {
     constructor(canvas) {
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setSize(canvas.clientWidth, canvas.clientHeight);
         this.renderer.setPixelRatio(1);
 
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x000000);
 
-        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
+        this.camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 100);
         this.camera.position.y = PLAYER_HEIGHT;
 
         const ambient = new THREE.AmbientLight(0xffffff, 1);
@@ -39,18 +39,26 @@ export class Renderer {
     }
 
     onResize() {
-        this.camera.aspect = window.innerWidth / window.innerHeight;
+        const w = this.renderer.domElement.clientWidth;
+        const h = this.renderer.domElement.clientHeight;
+        this.camera.aspect = w / h;
         this.camera.updateProjectionMatrix();
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setSize(w, h, false);
     }
 
     loadTexture(path) {
         if (this.textureCache.has(path)) {
             return this.textureCache.get(path);
         }
-        const tex = this.textureLoader.load(path);
+        const tex = this.textureLoader.load(
+            path,
+            undefined,
+            undefined,
+            () => {} // silently handle missing textures
+        );
         tex.magFilter = THREE.NearestFilter;
         tex.minFilter = THREE.NearestFilter;
+        tex.colorSpace = THREE.SRGBColorSpace;
         this.textureCache.set(path, tex);
         return tex;
     }
