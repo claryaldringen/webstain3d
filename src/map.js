@@ -17,6 +17,10 @@ export class GameMap {
         this.height = data.height;
         this.walls = data.walls;
         this.doors = data.doors || [];
+        // Mark door tiles as solid (-1)
+        for (const d of this.doors) {
+            this.walls[d.y][d.x] = -1;
+        }
         this.pushwalls = data.pushwalls || [];
         this.entities = data.entities || [];
         this.playerStart = data.playerStart;
@@ -27,7 +31,7 @@ export class GameMap {
 
     isWall(x, y) {
         if (x < 0 || x >= this.width || y < 0 || y >= this.height) return true;
-        return this.walls[y][x] > 0;
+        return this.walls[y][x] !== 0;
     }
 
     getWallId(x, y) {
