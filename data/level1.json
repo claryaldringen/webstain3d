@@ -24,7 +24,13 @@
         { "x": 8, "y": 11, "type": "normal", "orientation": "horizontal" }
     ],
     "pushwalls": [],
-    "entities": [],
+    "entities": [
+        { "type": "item", "subtype": "ammo_clip", "x": 3, "y": 1 },
+        { "type": "item", "subtype": "medkit", "x": 5, "y": 5 },
+        { "type": "item", "subtype": "cross", "x": 10, "y": 2 },
+        { "type": "item", "subtype": "key_gold", "x": 12, "y": 12 },
+        { "type": "item", "subtype": "machine_gun", "x": 7, "y": 7 }
+    ],
     "playerStart": { "x": 8, "y": 8, "angle": 0 },
     "exitTile": { "x": 14, "y": 14 }
 }
