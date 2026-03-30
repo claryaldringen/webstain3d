@@ -29,7 +29,10 @@
         { "type": "item", "subtype": "medkit", "x": 5, "y": 5 },
         { "type": "item", "subtype": "cross", "x": 10, "y": 2 },
         { "type": "item", "subtype": "key_gold", "x": 12, "y": 12 },
-        { "type": "item", "subtype": "machine_gun", "x": 7, "y": 7 }
+        { "type": "item", "subtype": "machine_gun", "x": 7, "y": 7 },
+        { "type": "guard", "x": 4, "y": 4, "angle": 180 },
+        { "type": "guard", "x": 10, "y": 5, "angle": 270 },
+        { "type": "dog", "x": 13, "y": 13, "angle": 90 }
     ],
     "playerStart": { "x": 8, "y": 8, "angle": 0 },
     "exitTile": { "x": 14, "y": 14 }
