@@ -6,7 +6,7 @@ export class Input {
         window.addEventListener('keydown', (e) => {
             if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
                  'Control', 'Alt', 'Shift', ' ', 'Escape',
-                 '1', '2', '3', '4'].includes(e.key)) {
+                 '1', '2', '3', '4', 'z', 'Z'].includes(e.key)) {
                 e.preventDefault();
             }
             if (!this.keys[e.code]) {
@@ -46,7 +46,7 @@ export class Input {
     }
 
     isFiring() {
-        return this.isDown('ControlLeft') || this.isDown('ControlRight');
+        return this.isDown('ControlLeft') || this.isDown('ControlRight') || this.isDown('KeyZ');
     }
 
     isInteracting() {
@@ -66,7 +66,7 @@ export class Input {
     }
 
     anyKey() {
-        return Object.keys(this.justPressed).length > 0;
+        return !!this.justPressed['Enter'] || !!this.justPressed['Space'];
     }
 
     endFrame() {

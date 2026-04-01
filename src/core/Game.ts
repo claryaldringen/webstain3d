@@ -13,6 +13,7 @@ import { TextureFactory } from '../assets/TextureFactory.js';
 import { WeaponId, WEAPON_FIRE_RATES, WEAPON_RANGE, WEAPON_DAMAGE_MIN, WEAPON_DAMAGE_MAX } from './constants.js';
 import { DoorState } from './GameState.js';
 import { tryOpenDoor, updateDoorState, detectDoorOrientation, type DoorInstance } from '../systems/DoorManager.js';
+import { assetUrl } from './assetUrl.js';
 import { applyItemEffect, checkPickup, type ItemInstance } from '../systems/ItemManager.js';
 import { hitscanCheck, updateWeaponCooldown } from '../systems/WeaponSystem.js';
 import { hitEnemy } from '../entities/EnemyAI.js';
@@ -182,7 +183,7 @@ export class Game {
     this.audio.init();
     const sounds = ['pistol', 'machinegun', 'knife', 'door_open', 'pickup', 'enemy_die', 'player_pain', 'secret', 'no_key'];
     for (const s of sounds) {
-      this.audio.loadSound(s, `assets/sounds/${s}.wav`);
+      this.audio.loadSound(s, assetUrl(`assets/sounds/${s}.wav`));
     }
 
     await this.initLevel();
@@ -196,7 +197,7 @@ export class Game {
     // Load VSWAP
     try {
       this.vswap = new VSwapLoader();
-      await this.vswap.load('assets/VSWAP.WL1', 'assets/palette.json');
+      await this.vswap.load(assetUrl('assets/VSWAP.WL1'), assetUrl('assets/palette.json'));
     } catch {
       this.vswap = null;
     }
@@ -206,9 +207,9 @@ export class Game {
     let data: LevelData;
     try {
       // Try to load static level JSON (check content-type to avoid Vite SPA fallback)
-      const checkResp = await fetch(`data/level${this.currentLevel}.json`, { method: 'HEAD' });
+      const checkResp = await fetch(assetUrl(`data/level${this.currentLevel}.json`), { method: 'HEAD' });
       if (checkResp.ok && (checkResp.headers.get('content-type') || '').includes('json')) {
-        data = await this.map.load(`data/level${this.currentLevel}.json`);
+        data = await this.map.load(assetUrl(`data/level${this.currentLevel}.json`));
       } else {
         throw new Error('No static level');
       }
@@ -216,7 +217,7 @@ export class Game {
       // Fallback: try config-based generation, then default procedural
       let config: LevelConfig;
       try {
-        const configResp = await fetch(`data/level-configs/level${this.currentLevel}.json`);
+        const configResp = await fetch(assetUrl(`data/level-configs/level${this.currentLevel}.json`));
         if (configResp.ok) {
           config = await configResp.json();
         } else {

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>VSWAP Sprite Export</title>
+    <style>
+        body { background: #222; color: #eee; font: 14px monospace; padding: 20px; }
+        h2 { color: #ff4; margin-top: 30px; }
+        .grid { display: flex; flex-wrap: wrap; gap: 4px; }
+        .sprite { text-align: center; font-size: 9px; color: #aaa; }
+        .sprite canvas { border: 1px solid #555; image-rendering: pixelated; }
+        button { font: bold 16px monospace; padding: 10px 20px; margin: 10px 5px; cursor: pointer; }
+        #status { color: #4f4; margin: 10px 0; }
+        .scale-select { margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>VSWAP.WL1 Sprite Export</h1>
+    <div id="status">Loading VSWAP...</div>
+
+    <div class="scale-select">
+        Export scale:
+        <select id="scale">
+            <option value="1">1x (64px)</option>
+            <option value="2">2x (128px)</option>
+            <option value="4" selected>4x (256px)</option>
+            <option value="8">8x (512px)</option>
+        </select>
+    </div>
+
+    <button id="btn-walls" disabled>Export Wall Textures (PNG)</button>
+    <button id="btn-sprites" disabled>Export All Sprites (PNG)</button>
+    <button id="btn-key" disabled>Export Key Sprites Only</button>
+
+    <h2>Wall Textures</h2>
+    <div id="walls" class="grid"></div>
+
+    <h2>Sprites</h2>
+    <div id="sprites" class="grid"></div>
+
+    <script type="module">
+        import { VSwapLoader } from '../src/vswap.js';
+
+        const loader = new VSwapLoader();
+        await loader.load('../assets/VSWAP.WL1', '../assets/palette.json');
+
+        const status = document.getElementById('status');
+        status.textContent = `Loaded: ${loader.numWalls} walls, ${loader.numSprites} sprites, ${loader.numSounds} sounds`;
+
+        // Render wall previews
+        const wallsDiv = document.getElementById('walls');
+        for (let i = 0; i < loader.numWalls; i++) {
+            const canvas = loader.getWallTexture(i);
+            if (!canvas) continue;
+            const wrapper = document.createElement('div');
+            wrapper.className = 'sprite';
+            canvas.style.width = '64px';
+            canvas.style.height = '64px';
+            wrapper.textContent = `wall_${String(i).padStart(3, '0')}`;
+            wrapper.appendChild(canvas);
+            wallsDiv.appendChild(wrapper);
+        }
+
+        // Render sprite previews
+        const spritesDiv = document.getElementById('sprites');
+        for (let i = 0; i < loader.numSprites; i++) {
+            const canvas = loader.getSpriteTexture(i);
+            if (!canvas) continue;
+            const wrapper = document.createElement('div');
+            wrapper.className = 'sprite';
+            canvas.style.width = '64px';
+            canvas.style.height = '64px';
+            wrapper.textContent = `spr_${String(i).padStart(3, '0')}`;
+            wrapper.appendChild(canvas);
+            spritesDiv.appendChild(wrapper);
+        }
+
+        // Enable buttons
+        document.getElementById('btn-walls').disabled = false;
+        document.getElementById('btn-sprites').disabled = false;
+        document.getElementById('btn-key').disabled = false;
+
+        function scaleCanvas(src, factor) {
+            const dst = document.createElement('canvas');
+            dst.width = src.width * factor;
+            dst.height = src.height * factor;
+            const ctx = dst.getContext('2d');
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(src, 0, 0, dst.width, dst.height);
+            return dst;
+        }
+
+        function downloadCanvas(canvas, filename) {
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        async function exportBatch(items, prefix, statusMsg) {
+            const scale = parseInt(document.getElementById('scale').value);
+            status.textContent = statusMsg;
+
+            for (let idx = 0; idx < items.length; idx++) {
+                const { index, canvas } = items[idx];
+                if (!canvas) continue;
+                const scaled = scaleCanvas(canvas, scale);
+                downloadCanvas(scaled, `${prefix}_${String(index).padStart(3, '0')}.png`);
+                // Small delay to prevent browser from blocking downloads
+                if (idx % 5 === 4) {
+                    await new Promise(r => setTimeout(r, 200));
+                    status.textContent = `${statusMsg} (${idx + 1}/${items.length})`;
+                }
+            }
+            status.textContent = `Done! Exported ${items.length} files.`;
+        }
+
+        // Export walls
+        document.getElementById('btn-walls').addEventListener('click', () => {
+            const items = [];
+            for (let i = 0; i < loader.numWalls; i++) {
+                const canvas = loader.getWallTexture(i);
+                if (canvas) items.push({ index: i, canvas });
+            }
+            exportBatch(items, 'wall', 'Exporting walls...');
+        });
+
+        // Export all sprites
+        document.getElementById('btn-sprites').addEventListener('click', () => {
+            const items = [];
+            for (let i = 0; i < loader.numSprites; i++) {
+                const canvas = loader.getSpriteTexture(i);
+                if (canvas) items.push({ index: i, canvas });
+            }
+            exportBatch(items, 'spr', 'Exporting sprites...');
+        });
+
+        // Export key sprites only (items, enemies, weapons used in game)
+        document.getElementById('btn-key').addEventListener('click', () => {
+            const keyIndices = {
+                // Decorative
+                'barrel': 3, 'table': 4, 'lamp': 6, 'pillar': 9, 'plant': 10, 'skeleton': 11, 'sink': 12,
+                // Items
+                'key_gold': 22, 'key_silver': 23, 'food': 26, 'medkit': 27, 'ammo': 28,
+                'machinegun_pickup': 29, 'chaingun_pickup': 30,
+                'cross': 31, 'chalice': 32, 'chest': 33, 'crown': 34, 'extra_life': 35,
+                // Guard (8 dirs + walk + shoot + die)
+                ...Object.fromEntries([...Array(41)].map((_, i) => [`guard_${i}`, 50 + i])),
+                // Dog
+                ...Object.fromEntries([...Array(39)].map((_, i) => [`dog_${i}`, 99 + i])),
+                // SS
+                ...Object.fromEntries([...Array(41)].map((_, i) => [`ss_${i}`, 138 + i])),
+                // Weapons
+                'knife_idle': 416, 'knife_f1': 417, 'knife_f2': 418, 'knife_f3': 419, 'knife_f4': 420,
+                'pistol_idle': 421, 'pistol_f1': 422, 'pistol_f2': 423, 'pistol_f3': 424, 'pistol_f4': 425,
+                'mg_idle': 426, 'mg_f1': 427, 'mg_f2': 428, 'mg_f3': 429, 'mg_f4': 430,
+                'chain_idle': 431, 'chain_f1': 432, 'chain_f2': 433, 'chain_f3': 434, 'chain_f4': 435,
+            };
+            const scale = parseInt(document.getElementById('scale').value);
+            status.textContent = 'Exporting key sprites...';
+
+            const entries = Object.entries(keyIndices);
+            let done = 0;
+            (async () => {
+                for (const [name, idx] of entries) {
+                    const canvas = loader.getSpriteTexture(idx);
+                    if (!canvas) continue;
+                    const scaled = scaleCanvas(canvas, scale);
+                    downloadCanvas(scaled, `${name}.png`);
+                    done++;
+                    if (done % 5 === 0) {
+                        await new Promise(r => setTimeout(r, 200));
+                        status.textContent = `Exporting key sprites... (${done}/${entries.length})`;
+                    }
+                }
+                status.textContent = `Done! Exported ${done} key sprites.`;
+            })();
+        });
+    </script>
+</body>
+</html>

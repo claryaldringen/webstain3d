@@ -37,6 +37,8 @@ function showScreen(name) {
 }
 
 async function initLevel() {
+    renderer.clearLevel();
+
     map = new GameMap(renderer);
     const data = await map.load('data/level1.json');
 
@@ -49,6 +51,7 @@ async function initLevel() {
     items.init(map.entities);
 
     enemies = new EnemyManager(spriteManager, map);
+    enemies.itemManager = items;
     enemies.init(map.entities);
 
     weapons = new WeaponSystem(map, enemies);
@@ -60,6 +63,8 @@ async function initLevel() {
 }
 
 function startGame() {
+    if (gameState !== STATE.TITLE) return; // prevent double-init
+    gameState = -1; // loading state — prevents re-triggering
     audio.init();
     audio.loadSound('pistol', 'assets/sounds/pistol.wav');
     audio.loadSound('machinegun', 'assets/sounds/machinegun.wav');
@@ -119,7 +124,7 @@ function gameLoop(time) {
             if (map.exitTile) {
                 const px = Math.floor(player.x);
                 const pz = Math.floor(player.z);
-                if (px === map.exitTile.x && pz === map.exitTile.y) {
+                if (px === map.exitTile.x && pz === map.exitTile.y && input.isInteracting()) {
                     gameState = STATE.COMPLETE;
                     showLevelComplete();
                 }
@@ -161,10 +166,10 @@ function showLevelComplete() {
 
     const statsEl = document.getElementById('level-stats');
     statsEl.innerHTML = `
-        <p>Time: ${elapsed}s</p>
-        <p>Kill Ratio: ${killPct}%</p>
-        <p>Treasure: ${treasurePct}%</p>
-        <p>Score: ${player.score}</p>
+        <p style="margin:6px 0;">Time: ${elapsed} seconds</p>
+        <p style="margin:6px 0;">Kill Ratio: ${killPct}%</p>
+        <p style="margin:6px 0;">Treasure: ${treasurePct}%</p>
+        <p style="margin:6px 0;">Score: ${String(player.score).padStart(7, '0')}</p>
     `;
     showScreen('complete');
 }

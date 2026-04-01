@@ -1,0 +1,7 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/wolf3d/(.*)", "destination": "/$1" }
+  ]
+}

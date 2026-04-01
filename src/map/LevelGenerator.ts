@@ -7,6 +7,7 @@ import { generateHubSpoke } from './generators/HubSpoke.js';
 import { generateMaze } from './generators/Maze.js';
 import { validateLevel } from './LevelValidator.js';
 import { floodFill } from './LevelValidator.js';
+import { STRUCTURAL_WALL_IDS, DECORATIVE_WALL_IDS } from '../core/constants.js';
 
 const MIN_SPAWN_ENEMY_DIST = 8;
 const AMMO_PER_CLIP = 8;
@@ -57,6 +58,40 @@ function isChokepoint(walls: number[][], x: number, y: number, width: number, he
   const westWall = x - 1 < 0 || walls[y][x - 1] > 0;
   return (northWall && southWall && !eastWall && !westWall) ||
          (eastWall && westWall && !northWall && !southWall);
+}
+
+/**
+ * Post-process walls: replace ~5% of wall tiles that face a floor tile
+ * with a decorative variant for visual interest.
+ */
+function decorateWalls(
+  rng: SeededRandom,
+  walls: number[][],
+  width: number,
+  height: number,
+  decorateChance: number = 0.05,
+): void {
+  const dirs = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      if (walls[y][x] <= 0) continue; // skip floor/door tiles
+
+      // Only decorate walls adjacent to at least one floor tile (visible face)
+      let adjacentToFloor = false;
+      for (const [dx, dy] of dirs) {
+        if (walls[y + dy][x + dx] <= 0) {
+          adjacentToFloor = true;
+          break;
+        }
+      }
+      if (!adjacentToFloor) continue;
+
+      if (rng.next() < decorateChance) {
+        walls[y][x] = rng.pick(DECORATIVE_WALL_IDS);
+      }
+    }
+  }
 }
 
 function generateLayout(rng: SeededRandom, cfg: ResolvedConfig): LayoutResult {
@@ -272,10 +307,13 @@ export function generateLevel(config: LevelConfig): LevelData {
   for (let attempt = 0; attempt < 10; attempt++) {
     const rng = new SeededRandom(cfg.seed + attempt);
 
-    // 1. Generate layout
+    // 1. Generate layout (uses structural wall IDs only)
     const layout = generateLayout(rng, cfg);
     const walls = layout.walls;
     const rooms = layout.rooms;
+
+    // 1b. Sprinkle decorative wall tiles (~5% of visible walls)
+    decorateWalls(rng, walls, cfg.width, cfg.height);
 
     const floorTiles = getFloorTiles(walls, cfg.width, cfg.height);
     if (floorTiles.length < 20) continue; // Not enough space

@@ -7,7 +7,7 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { overflow: hidden; background: #000; }
-        #game-canvas { display: block; width: 100vw; height: calc(100vh - 60px); }
+        #game-canvas { display: block; width: 100vw; height: calc(100vh - clamp(48px, 6vh, 72px)); image-rendering: pixelated; image-rendering: crisp-edges; }
         .screen-overlay {
             position: absolute;
             top: 0; left: 0;
@@ -27,49 +27,81 @@
         #hud { position: absolute; bottom: 0; left: 0; width: 100%; }
         #hud-bar {
             display: flex;
-            justify-content: space-around;
-            align-items: center;
-            background: #545454;
-            border-top: 3px solid #808080;
-            height: 60px;
-            padding: 0 20px;
+            justify-content: center;
+            align-items: stretch;
+            background: #000088;
+            border-top: 2px solid #4444CC;
+            height: clamp(48px, 6vh, 72px);
+            padding: 0;
             font-family: monospace;
             user-select: none;
         }
-        .hud-item {
+        .hud-cell {
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: center;
+            padding: 2px 10px;
+            border-left: 2px solid #4444CC;
+            border-top: 2px solid #4444CC;
+            border-right: 2px solid #000044;
+            border-bottom: 2px solid #000044;
+            min-width: 70px;
+        }
+        .hud-cell-wide { min-width: 100px; }
+        .hud-cell-face {
+            padding: 2px 6px;
+            min-width: 56px;
+            background: #000060;
+        }
+        .hud-cell-weapon {
+            min-width: 80px;
+            background: #000060;
+        }
+        .hud-cell-keys {
+            min-width: 30px;
+            padding: 2px 4px;
         }
         .hud-label {
-            color: #a0a0a0;
-            font-size: 10px;
+            color: #8888CC;
+            font-size: clamp(7px, 1vh, 10px);
             letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 1px;
         }
         .hud-value {
-            color: #fff;
-            font-size: 24px;
+            color: #FCFC54;
+            font-size: clamp(18px, 3vh, 30px);
             font-weight: bold;
+            letter-spacing: 2px;
         }
         #hud-face {
             width: 48px;
             height: 48px;
-            background: #888;
-            border: 2px solid #666;
+            background: #000060;
+            border: 2px solid #4444CC;
             image-rendering: pixelated;
             background-size: contain;
+            background-repeat: no-repeat;
+        }
+        #hud-weapon-icon {
+            width: 64px;
+            height: 48px;
+            image-rendering: pixelated;
         }
         .hud-key {
-            width: 16px;
-            height: 16px;
-            margin: 2px;
-            border: 1px solid #333;
+            width: 12px;
+            height: 12px;
+            margin: 1px;
+            border: 1px solid #000044;
         }
         #hud-key-gold.active { background: #FFD700; }
         #hud-key-silver.active { background: #C0C0C0; }
-        #hud-keys-container {
+        .hud-cell-keys {
             display: flex;
             flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
     </style>
 </head>
@@ -77,57 +109,65 @@
     <canvas id="game-canvas"></canvas>
     <div id="hud">
     <div id="hud-bar">
-        <div class="hud-item">
+        <div class="hud-cell">
             <span class="hud-label">FLOOR</span>
             <span class="hud-value" id="hud-level">1</span>
         </div>
-        <div class="hud-item">
+        <div class="hud-cell hud-cell-wide">
             <span class="hud-label">SCORE</span>
-            <span class="hud-value" id="hud-score">0</span>
+            <span class="hud-value" id="hud-score">000000</span>
         </div>
-        <div class="hud-item">
+        <div class="hud-cell">
             <span class="hud-label">LIVES</span>
             <span class="hud-value" id="hud-lives">3</span>
         </div>
-        <div class="hud-item" id="hud-face-container">
+        <div class="hud-cell hud-cell-face">
             <div id="hud-face"></div>
         </div>
-        <div class="hud-item">
+        <div class="hud-cell">
             <span class="hud-label">HEALTH</span>
             <span class="hud-value" id="hud-health">100%</span>
         </div>
-        <div class="hud-item">
+        <div class="hud-cell">
             <span class="hud-label">AMMO</span>
             <span class="hud-value" id="hud-ammo">8</span>
         </div>
-        <div class="hud-item" id="hud-keys-container">
+        <div class="hud-cell hud-cell-keys" id="hud-keys-container">
             <div id="hud-key-gold" class="hud-key"></div>
             <div id="hud-key-silver" class="hud-key"></div>
         </div>
+        <div class="hud-cell hud-cell-weapon">
+            <canvas id="hud-weapon-icon" width="64" height="48"></canvas>
+        </div>
     </div>
 </div>
-    <div id="screen-title" class="screen-overlay">
-        <h1 style="font-size:48px;color:#c00;text-shadow:3px 3px #000;">WEBSTAIN 3D</h1>
-        <p style="margin-top:20px;animation:blink 1s infinite;">PRESS ANY KEY</p>
+    <div id="screen-title" class="screen-overlay" style="background: #000;">
+        <div style="text-align:center;">
+            <h1 style="font-size:56px;color:#CC0000;font-family:monospace;font-weight:bold;text-shadow:4px 4px #000, 2px 2px #440000;letter-spacing:6px;">WEBSTAIN 3D</h1>
+            <div style="margin-top:8px;font-size:14px;color:#888;font-family:monospace;">A Wolfenstein 3D Tribute</div>
+            <div id="title-menu" style="margin-top:40px;font-family:monospace;">
+                <div data-menu-item data-label="New Game" style="color:#FCFC54;font-size:18px;margin:8px 0;">&#9658; New Game</div>
+                <div data-menu-item data-label="Sound" style="color:#808080;font-size:14px;margin:8px 0;">Sound</div>
+                <div data-menu-item data-label="Control" style="color:#808080;font-size:14px;margin:8px 0;">Control</div>
+                <div data-menu-item data-label="Quit" style="color:#808080;font-size:14px;margin:8px 0;">Quit</div>
+            </div>
+            <p id="title-hint" style="margin-top:40px;color:#FCFC54;font-size:14px;font-family:monospace;animation:blink 1s infinite;">PRESS ENTER TO SELECT</p>
+            <div style="margin-top:30px;font-size:11px;color:#444;font-family:monospace;">&copy; 2024 &mdash; Inspired by id Software</div>
+        </div>
     </div>
-    <div id="screen-death" class="screen-overlay" style="display:none;">
-        <h1 style="color:#c00;">GAME OVER</h1>
+    <div id="screen-death" class="screen-overlay" style="display:none;background:rgba(128,0,0,0.85);">
+        <h1 style="font-size:48px;color:#FF0000;font-family:monospace;text-shadow:3px 3px #000;">YOU ARE DEAD</h1>
+        <p style="margin-top:20px;color:#FCFC54;font-family:monospace;animation:blink 1s infinite;">PRESS ANY KEY</p>
     </div>
-    <div id="screen-complete" class="screen-overlay" style="display:none;">
-        <h1>FLOOR COMPLETE!</h1>
-        <div id="level-stats" style="text-align:left;margin-top:20px;"></div>
+    <div id="screen-complete" class="screen-overlay" style="display:none;background:rgba(0,0,80,0.9);">
+        <h1 style="font-size:36px;color:#FCFC54;font-family:monospace;">FLOOR COMPLETE!</h1>
+        <div id="level-stats" style="text-align:left;margin-top:20px;color:#FCFC54;font-family:monospace;font-size:18px;"></div>
+        <p style="margin-top:30px;color:#808080;font-family:monospace;animation:blink 1s infinite;">PRESS ANY KEY</p>
     </div>
-    <div id="screen-pause" class="screen-overlay" style="display:none;">
-        <h1>PAUSED</h1>
-        <p>Press ESC to resume</p>
+    <div id="screen-pause" class="screen-overlay" style="display:none;background:rgba(0,0,0,0.9);">
+        <h1 style="font-size:48px;color:#FCFC54;font-family:monospace;">PAUSED</h1>
+        <p style="margin-top:20px;color:#808080;font-family:monospace;">Press ESC to resume</p>
     </div>
-    <script type="importmap">
-    {
-        "imports": {
-            "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"
-        }
-    }
-    </script>
-    <script type="module" src="src/main.js"></script>
+    <script type="module" src="src/main.ts"></script>
 </body>
 </html>

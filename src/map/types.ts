@@ -44,6 +44,8 @@ export interface LayoutResult {
 }
 
 export function resolveConfig(config: LevelConfig): ResolvedConfig {
+  // Cap wallVariety to max structural wall ID count (10)
+  const wallVariety = Math.min(config.wallVariety ?? 3, 10);
   return {
     width: config.width ?? 32,
     height: config.height ?? 32,
@@ -54,7 +56,7 @@ export function resolveConfig(config: LevelConfig): ResolvedConfig {
     itemDensity: config.itemDensity,
     doorCount: config.doorCount ?? [2, 6],
     lockedDoors: config.lockedDoors ?? false,
-    wallVariety: config.wallVariety ?? 3,
+    wallVariety,
     spawnCount: config.spawnCount ?? 0,
     spawnBalance: config.spawnBalance ?? false,
   };

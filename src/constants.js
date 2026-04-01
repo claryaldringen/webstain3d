@@ -39,8 +39,8 @@ export const WEAPON_RANGE = {
 
 // Enemies
 export const ENEMY_TYPES = {
-    guard: { health: 25, speed: 1.5, damage: [5, 15], attackRange: 10, alertSound: 'guard_alert' },
-    ss: { health: 50, speed: 1.5, damage: [10, 20], attackRange: 10, alertSound: 'ss_alert' },
+    guard: { health: 25, speed: 1.5, damage: [5, 15], attackRange: 2, alertSound: 'guard_alert' },
+    ss: { health: 50, speed: 1.5, damage: [10, 20], attackRange: 2, alertSound: 'ss_alert' },
     dog: { health: 1, speed: 3.0, damage: [5, 10], attackRange: 1.2, alertSound: 'dog_alert' },
 };
 
@@ -71,5 +71,5 @@ export const DOOR_CLOSE_TIME = 1.0;
 export const GUNFIRE_ALERT_RADIUS = 20;
 
 // Colors
-export const FLOOR_COLOR = 0x707070;
-export const CEILING_COLOR = 0x393939;
+export const FLOOR_COLOR = 0x7C7C7C;
+export const CEILING_COLOR = 0x388088;

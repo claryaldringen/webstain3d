@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Wolf3D Asset Preview</title>
+    <style>
+        body { background: #222; color: #eee; font-family: monospace; }
+        .section { margin: 20px; }
+        .section h2 { color: #ff0; }
+        .grid { display: flex; flex-wrap: wrap; gap: 8px; }
+        .tile { text-align: center; }
+        .tile canvas { border: 1px solid #555; image-rendering: pixelated; width: 128px; height: 128px; }
+        .tile .label { font-size: 11px; color: #aaa; }
+    </style>
+</head>
+<body>
+    <h1>Wolf3D VSWAP Asset Preview</h1>
+    <div id="info"></div>
+    <div class="section">
+        <h2>Wall Textures (first 20)</h2>
+        <div id="walls" class="grid"></div>
+    </div>
+    <div class="section">
+        <h2>Sprites (first 40)</h2>
+        <div id="sprites" class="grid"></div>
+    </div>
+
+    <script type="module">
+        import { VSwapLoader } from '../src/vswap.js';
+
+        const loader = new VSwapLoader();
+        await loader.load('../assets/VSWAP.WL1', '../assets/palette.json');
+
+        document.getElementById('info').textContent =
+            `Chunks: ${loader.chunks.length} | Walls: ${loader.numWalls} | Sprites: ${loader.numSprites} | Sounds: ${loader.numSounds}`;
+
+        const wallsDiv = document.getElementById('walls');
+        for (let i = 0; i < Math.min(50, loader.numWalls); i++) {
+            const canvas = loader.getWallTexture(i);
+            if (canvas) {
+                const div = document.createElement('div');
+                div.className = 'tile';
+                div.appendChild(canvas);
+                const label = document.createElement('div');
+                label.className = 'label';
+                label.textContent = `Wall #${i}`;
+                div.appendChild(label);
+                wallsDiv.appendChild(div);
+            }
+        }
+
+        const spritesDiv = document.getElementById('sprites');
+        for (let i = 0; i < Math.min(80, loader.numSprites); i++) {
+            const canvas = loader.getSpriteTexture(i);
+            if (canvas) {
+                const div = document.createElement('div');
+                div.className = 'tile';
+                div.appendChild(canvas);
+                const label = document.createElement('div');
+                label.className = 'label';
+                label.textContent = `Sprite #${i}`;
+                div.appendChild(label);
+                spritesDiv.appendChild(div);
+            }
+        }
+    </script>
+</body>
+</html>

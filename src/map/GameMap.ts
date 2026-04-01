@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { TILE_SIZE, WALL_HEIGHT } from '../core/constants.js';
 import type { LevelData, DoorData, PushwallData, EntityData, TilePosition, PlayerStartData } from '../types/index.js';
+import { assetUrl } from '../core/assetUrl.js';
 
 /** Minimal interface for the scene/renderer dependency. */
 export interface SceneHost {
@@ -55,7 +56,7 @@ export class GameMap {
 
     // Check if real texture files exist (verify content-type is actually an image,
     // not an SPA fallback HTML page from the dev server)
-    this.hasTextures = await fetch('assets/textures/wall_001.png', { method: 'HEAD' })
+    this.hasTextures = await fetch(assetUrl('assets/textures/wall_001.png'), { method: 'HEAD' })
       .then(r => r.ok && (r.headers.get('content-type') || '').startsWith('image/'))
       .catch(() => false);
 

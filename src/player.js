@@ -32,10 +32,12 @@ export class Player {
         const movement = input.getMovement();
         const speed = PLAYER_MOVE_SPEED * (movement.sprint ? PLAYER_SPRINT_MULTIPLIER : 1);
         this.angle += movement.rotate * PLAYER_ROTATE_SPEED * dt;
-        const dirX = Math.cos(this.angle);
-        const dirZ = -Math.sin(this.angle);
-        const strafeX = Math.cos(this.angle + Math.PI / 2);
-        const strafeZ = -Math.sin(this.angle + Math.PI / 2);
+        // Three.js camera.rotation.y = angle looks toward (-sin(angle), 0, -cos(angle))
+        const dirX = -Math.sin(this.angle);
+        const dirZ = -Math.cos(this.angle);
+        // Right vector (strafe): perpendicular to forward
+        const strafeX = Math.cos(this.angle);
+        const strafeZ = -Math.sin(this.angle);
         let dx = (dirX * movement.forward + strafeX * movement.strafe) * speed * dt;
         let dz = (dirZ * movement.forward + strafeZ * movement.strafe) * speed * dt;
         if (dx !== 0) {
@@ -61,7 +63,7 @@ export class Player {
         const maxTZ = Math.floor((pz + r) / TILE_SIZE);
         for (let ty = minTZ; ty <= maxTZ; ty++) {
             for (let tx = minTX; tx <= maxTX; tx++) {
-                if (this.map.isWall(tx, ty)) {
+                if (this.map.isSolid(tx, ty)) {
                     const closestX = Math.max(tx * TILE_SIZE, Math.min(px, (tx + 1) * TILE_SIZE));
                     const closestZ = Math.max(ty * TILE_SIZE, Math.min(pz, (ty + 1) * TILE_SIZE));
                     const distX = px - closestX;
@@ -84,8 +86,11 @@ export class Player {
     }
 
     takeDamage(amount) {
-        this.health = Math.max(0, this.health - amount);
-        return this.health <= 0;
+        this.health -= amount;
+        if (this.health <= 0) {
+            this.health = 0;
+        }
+        return true;
     }
 
     heal(amount) {
