@@ -58,23 +58,43 @@ export class HUD {
   }
 
   update(player: Player): void {
-    if (this.els.score) this.els.score.textContent = String(player.score).padStart(6, '0');
-    if (this.els.lives) this.els.lives.textContent = String(player.lives);
-    if (this.els.health) this.els.health.textContent = player.health + '%';
-    if (this.els.ammo) this.els.ammo.textContent = String(player.ammo);
+    this.updateRaw(player.score, player.lives, player.health, player.ammo,
+      player.keys['gold'] ?? false, player.keys['silver'] ?? false, player.currentWeapon);
+  }
 
-    if (this.els.keyGold) this.els.keyGold.classList.toggle('active', player.keys['gold'] ?? false);
-    if (this.els.keySilver) this.els.keySilver.classList.toggle('active', player.keys['silver'] ?? false);
+  updateRaw(
+    score: number, lives: number, health: number, ammo: number,
+    keyGold: boolean, keySilver: boolean, weapon: number,
+  ): void {
+    if (this.els.score) this.els.score.textContent = String(score).padStart(6, '0');
+    if (this.els.lives) this.els.lives.textContent = String(lives);
+    if (this.els.health) this.els.health.textContent = health + '%';
+    if (this.els.ammo) this.els.ammo.textContent = String(ammo);
 
-    if (player.health !== this.lastHealth) {
-      this.lastHealth = player.health;
-      this.updateFace(player.health);
+    if (this.els.keyGold) this.els.keyGold.classList.toggle('active', keyGold);
+    if (this.els.keySilver) this.els.keySilver.classList.toggle('active', keySilver);
+
+    if (health !== this.lastHealth) {
+      this.lastHealth = health;
+      this.updateFace(health);
     }
 
-    if (player.currentWeapon !== this.lastWeapon) {
-      this.lastWeapon = player.currentWeapon;
-      this.updateWeaponIcon(player.currentWeapon);
+    if (weapon !== this.lastWeapon) {
+      this.lastWeapon = weapon;
+      this.updateWeaponIcon(weapon);
     }
+  }
+
+  flashDamage(): void {
+    // Brief red flash on screen edge
+    const flash = document.createElement('div');
+    flash.style.cssText = `
+      position: fixed; inset: 0; pointer-events: none; z-index: 50;
+      background: radial-gradient(ellipse, transparent 50%, rgba(255,0,0,0.4) 100%);
+      animation: fadeOut 0.3s forwards;
+    `;
+    document.body.appendChild(flash);
+    setTimeout(() => flash.remove(), 300);
   }
 
   private updateWeaponIcon(weaponId: WeaponId): void {

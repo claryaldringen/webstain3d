@@ -2,7 +2,7 @@ import type { MovementInput } from '../types/index.js';
 
 const PREVENTED_KEYS = new Set([
   'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
-  'Control', 'Alt', 'Shift', ' ', 'Escape',
+  'Control', 'Alt', 'Shift', ' ', 'Escape', 'Tab',
   '1', '2', '3', '4', 'z', 'Z',
 ]);
 
@@ -78,6 +78,10 @@ export class Input {
 
   anyKey(): boolean {
     return !!this.justPressed['Enter'] || !!this.justPressed['Space'];
+  }
+
+  isScoreboardHeld(): boolean {
+    return this.isDown('Tab');
   }
 
   endFrame(): void {
