@@ -384,8 +384,13 @@ export class Game {
 
       case GameState.Complete:
         if (this.input.anyKey()) {
-          this.state = GameState.Title;
-          this.showScreen('title');
+          this.currentLevel++;
+          this.state = GameState.Loading;
+          this.showScreen(null);
+          this.initLevel().then(() => {
+            this.state = GameState.Playing;
+            this.levelStartTime = performance.now();
+          });
         }
         break;
 

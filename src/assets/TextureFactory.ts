@@ -4,32 +4,33 @@ import { TEXTURE_SIZE } from '../core/constants.js';
 import { assetUrl } from '../core/assetUrl.js';
 
 // Wall texture mapping: wallId -> [darkVswapIdx, lightVswapIdx]
+// VSWAP convention: even index = light face, odd index = dark face
 // Structural (plain) textures: IDs 1-10
 // Decorative (accent) textures: IDs 51-60
 const WALL_MAP: Record<number, [number, number]> = {
-  // Structural walls
-  1: [0, 1],     // gray stone
-  2: [16, 17],   // red brick
-  3: [8, 9],     // blue stone
-  4: [12, 13],   // wood paneling
-  5: [24, 25],   // purple stone
-  6: [22, 23],   // red brick variant
-  7: [14, 15],   // metal door frame
-  8: [46, 47],   // gray stone variant
-  9: [48, 49],   // stone with cross
-  10: [44, 45],  // brown stone
+  // Structural walls (plain textures for room fill)
+  1: [1, 0],     // gray stone
+  2: [3, 2],     // gray stone alt
+  3: [15, 14],   // blue stone
+  4: [17, 16],   // blue stone alt
+  5: [23, 22],   // wood paneling
+  6: [33, 32],   // red brick
+  7: [37, 36],   // purple stone
+  8: [53, 52],   // gray brick
+  9: [29, 28],   // teal metal plate
+  10: [25, 24],  // metal/industrial
 
   // Decorative walls (used sparingly as accents)
-  51: [2, 3],    // Nazi banner on gray stone
-  52: [6, 7],    // Hitler portrait on gray
-  53: [18, 19],  // Nazi eagle on red brick
-  54: [10, 11],  // Nazi eagle emblem on red
-  55: [34, 35],  // eagle on purple stone
-  56: [20, 21],  // swastika medallion on red brick
-  57: [4, 5],    // cell door / dungeon
-  58: [26, 27],  // metal/achtung sign
-  59: [36, 37],  // iron cross on wood
-  60: [50, 51],  // gray variant with emblem
+  51: [5, 4],    // Nazi flag on gray stone
+  52: [7, 6],    // Hitler portrait on gray
+  53: [9, 8],    // jail cell bars
+  54: [11, 10],  // arch with swastika emblem
+  55: [13, 12],  // jail cell with skeleton
+  56: [19, 18],  // eagle emblem in frame
+  57: [21, 20],  // Hitler portrait in gold frame
+  58: [27, 26],  // Verboten/Achtung sign
+  59: [35, 34],  // swastika medallion on red brick
+  60: [39, 38],  // eagle on purple stone
 };
 
 function pixelsToCanvas(pixels: Uint8ClampedArray, size: number = TEXTURE_SIZE): HTMLCanvasElement {
