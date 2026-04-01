@@ -1,0 +1,12 @@
+{
+  "style": "rooms_corridors",
+  "seed": 100,
+  "enemyCount": [8, 15],
+  "enemyTypes": { "guard": 3, "ss": 1, "dog": 2 },
+  "itemDensity": 0.6,
+  "doorCount": [3, 6],
+  "lockedDoors": true,
+  "wallVariety": 4,
+  "spawnCount": 4,
+  "spawnBalance": false
+}
