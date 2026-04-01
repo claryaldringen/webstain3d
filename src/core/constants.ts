@@ -52,12 +52,18 @@ export const ENEMY_TYPES: Record<string, EnemyConfig> = {
   guard: { health: 25, speed: 1.5, damage: [5, 15], attackRange: 2, alertSound: 'guard_alert' },
   ss: { health: 50, speed: 1.5, damage: [10, 20], attackRange: 2, alertSound: 'ss_alert' },
   dog: { health: 1, speed: 3.0, damage: [5, 10], attackRange: 1.2, alertSound: 'dog_alert' },
+  mutant: { health: 45, speed: 1.8, damage: [8, 18], attackRange: 2, alertSound: 'guard_alert' },
+  officer: { health: 50, speed: 2.2, damage: [12, 24], attackRange: 2.5, alertSound: 'ss_alert' },
+  boss: { health: 500, speed: 1.0, damage: [25, 40], attackRange: 3, alertSound: 'ss_alert' },
 };
 
 export const ENEMY_DROPS: Record<string, string | null> = {
   guard: 'ammo_clip',
   ss: 'machine_gun',
   dog: null,
+  mutant: 'ammo_clip',
+  officer: 'ammo_clip',
+  boss: 'chaingun',
 };
 
 export const ENEMY_SIGHT_RANGE = 30;

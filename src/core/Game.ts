@@ -225,17 +225,35 @@ export class Game {
         }
       } catch {
         const lvl = this.currentLevel;
+        // Progressive difficulty: introduce enemy types as levels advance
+        const enemyTypes: Record<string, number> = { guard: 3, dog: 1 };
+        if (lvl >= 2) enemyTypes.ss = 1;
+        if (lvl >= 3) enemyTypes.mutant = 1;
+        if (lvl >= 5) enemyTypes.officer = 1;
+        if (lvl >= 7) { enemyTypes.officer = 2; enemyTypes.ss = 2; }
+
         config = {
           style: 'rooms_corridors',
           seed: lvl * 1000 + Date.now(),
           enemyCount: [5 + lvl * 2, 10 + lvl * 3],
-          enemyTypes: { guard: 3, ss: lvl > 1 ? 1 : 0, dog: 1 },
+          enemyTypes,
           itemDensity: 0.5,
           doorCount: [2, 4 + lvl],
           wallVariety: Math.min(7, 2 + lvl),
         };
       }
       const levelData = generateLevel(config);
+
+      // Spawn boss near the exit on level 10
+      if (lvl === 10 && levelData.exitTile) {
+        levelData.entities.push({
+          type: 'boss',
+          x: levelData.exitTile.x,
+          y: levelData.exitTile.y - 1,
+          angle: 180,
+        });
+      }
+
       data = await this.map.loadFromData(levelData);
     }
 

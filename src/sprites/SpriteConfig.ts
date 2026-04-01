@@ -32,6 +32,9 @@ export const VSWAP_SPRITE_MAP: Record<string, number> = {
   guard: 50,          // Guard standing front
   dog: 99,            // Dog walk frame 1 front
   ss: 138,            // SS standing front
+  mutant: 187,        // Mutant standing front
+  officer: 236,       // Officer standing front
+  boss: 296,          // Hans Grosse walk frame 1 front
 };
 
 /**
@@ -53,6 +56,8 @@ export interface EnemySpriteSet {
   die2: number;
   die3: number;
   dead: number;
+  /** If false, sprites are front-facing only (no +direction offset). Default: true. */
+  directional?: boolean;
 }
 
 export const ENEMY_SPRITE_BASE: Record<string, EnemySpriteSet> = {
@@ -70,5 +75,23 @@ export const ENEMY_SPRITE_BASE: Record<string, EnemySpriteSet> = {
     stand: 138, walk1: 146, walk2: 154, walk3: 162, walk4: 170,
     shoot1: 184, shoot2: 185, shoot3: 186,
     pain: 178, die1: 179, die2: 180, die3: 181, dead: 183,
+  },
+  // Mutant & Officer: shareware VSWAP has no sprites for these.
+  // Re-use guard/SS sprites; distinct gameplay via different stats + placeholder colors.
+  mutant: {
+    stand: 50, walk1: 58, walk2: 66, walk3: 74, walk4: 82,
+    shoot1: 96, shoot2: 97, shoot3: 98,
+    pain: 90, die1: 91, die2: 92, die3: 93, dead: 95,
+  },
+  officer: {
+    stand: 138, walk1: 146, walk2: 154, walk3: 162, walk4: 170,
+    shoot1: 184, shoot2: 185, shoot3: 186,
+    pain: 178, die1: 179, die2: 180, die3: 181, dead: 183,
+  },
+  boss: {
+    stand: 296, walk1: 296, walk2: 297, walk3: 298, walk4: 299,
+    shoot1: 300, shoot2: 301, shoot3: 302,
+    pain: 304, die1: 304, die2: 305, die3: 306, dead: 303,
+    directional: false,
   },
 };

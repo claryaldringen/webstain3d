@@ -38,6 +38,9 @@ const ENEMY_COLORS: Record<string, string> = {
   guard: '#4466AA',
   ss: '#666666',
   dog: '#8B6914',
+  mutant: '#44AA44',
+  officer: '#EEEEEE',
+  boss: '#AA2222',
 };
 
 export class EnemyManager {
@@ -61,9 +64,10 @@ export class EnemyManager {
       const x = (e.x + 0.5) * TILE_SIZE;
       const z = (e.y + 0.5) * TILE_SIZE;
       const texPath = `assets/sprites/enemy_${e.type}_front.png`;
+      const isBoss = e.type === 'boss';
       const sprite = this.spriteManager.create(texPath, x, z, {
-        width: 1.0,
-        height: 1.0,
+        width: isBoss ? 1.5 : 1.0,
+        height: isBoss ? 1.5 : 1.0,
         anchorBottom: true,
         label: e.type,
         color: ENEMY_COLORS[e.type] || '#AA4444',

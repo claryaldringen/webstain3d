@@ -34,7 +34,7 @@ export interface PushwallData {
 }
 
 export interface EntityData {
-  type: 'item' | 'guard' | 'ss' | 'dog';
+  type: 'item' | 'guard' | 'ss' | 'dog' | 'mutant' | 'officer' | 'boss';
   subtype?: string;
   x: number;
   y: number;

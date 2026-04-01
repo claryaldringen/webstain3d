@@ -60,11 +60,11 @@ export function getSpriteIndex(
       // Walking — alternate walk frames (4 frames x 8 directions)
       const walkFrame = Math.floor(stateTimer * 4) % 4;
       const walkAnims = [spriteBase.walk1, spriteBase.walk2, spriteBase.walk3, spriteBase.walk4];
-      return walkAnims[walkFrame]! + direction;
+      return walkAnims[walkFrame]! + (spriteBase.directional !== false ? direction : 0);
     }
 
     default:
       // Idle / Alert — standing, pick direction
-      return spriteBase.stand + direction;
+      return spriteBase.stand + (spriteBase.directional !== false ? direction : 0);
   }
 }

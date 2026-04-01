@@ -11,7 +11,7 @@ import { STRUCTURAL_WALL_IDS, DECORATIVE_WALL_IDS } from '../core/constants.js';
 
 const MIN_SPAWN_ENEMY_DIST = 8;
 const AMMO_PER_CLIP = 8;
-const SHOTS_PER_ENEMY: Record<string, number> = { guard: 3, ss: 5, dog: 1 };
+const SHOTS_PER_ENEMY: Record<string, number> = { guard: 3, ss: 5, dog: 1, mutant: 4, officer: 6, boss: 50 };
 const STARTING_AMMO = 8;
 
 function getFloorTiles(walls: number[][], width: number, height: number): TilePosition[] {
