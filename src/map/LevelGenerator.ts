@@ -297,9 +297,28 @@ function placeItems(
   let wallIdx = 0;
   let openIdx = 0;
 
-  // Blocking decoration: walls as neighbors are OK, but every floor tile
-  // around it (out of 8) must be free. Also need ≥3 open orthogonal neighbors
-  // so there's always a way around. No doors adjacent.
+  const ww = walls[0].length;
+  const wh = walls.length;
+  const isFloor = (x: number, y: number): boolean =>
+    x >= 0 && x < ww && y >= 0 && y < wh && walls[y][x] === 0;
+
+  // A tile is a corridor tile if it has exactly 2 open orthogonal neighbors
+  // on opposite sides (N+S or E+W).
+  const isCorridorTile = (x: number, y: number): boolean => {
+    const n = isFloor(x, y - 1);
+    const s = isFloor(x, y + 1);
+    const e = isFloor(x + 1, y);
+    const w = isFloor(x - 1, y);
+    const openCount = +n + +s + +e + +w;
+    if (openCount !== 2) return false;
+    return (n && s) || (e && w); // opposite sides only
+  };
+
+  // Blocking decoration placement rules:
+  // 1. All floor neighbors (of 8) must be unoccupied
+  // 2. ≥3 open orthogonal neighbors (path around)
+  // 3. No adjacent doors
+  // 4. No adjacent corridor tiles (would block corridor entrance)
   const isSafeForBlocking = (pos: TilePosition): boolean => {
     let openOrtho = 0;
     for (let dy = -1; dy <= 1; dy++) {
@@ -307,13 +326,17 @@ function placeItems(
         if (dx === 0 && dy === 0) continue;
         const nx = pos.x + dx;
         const ny = pos.y + dy;
-        if (nx < 0 || nx >= walls[0].length || ny < 0 || ny >= walls.length) continue;
+        if (nx < 0 || nx >= ww || ny < 0 || ny >= wh) continue;
         const v = walls[ny][nx];
         if (v === -1) return false; // adjacent to door
         if (v > 0) continue;        // wall neighbor is fine
         // Floor tile — must not be occupied by another item
         if (occupiedSet.has(`${nx},${ny}`)) return false;
-        if (dx === 0 || dy === 0) openOrtho++;
+        if (dx === 0 || dy === 0) {
+          openOrtho++;
+          // Reject if this neighbor is a corridor tile — we'd block its entrance
+          if (isCorridorTile(nx, ny)) return false;
+        }
       }
     }
     return openOrtho >= 3;
