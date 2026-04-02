@@ -327,6 +327,21 @@ export class Game {
     };
     this.enemies = new EnemyManager(this.spriteManager, this.map);
     this.enemies.itemManager = itemManagerProxy;
+    this.enemies.doorOpener = {
+      tryOpenAt: (tileX: number, tileY: number): boolean => {
+        for (const door of this.doors) {
+          if (door.x === tileX && door.y === tileY) {
+            const result = tryOpenDoor(door, null);
+            if (result === 'opening') {
+              this.audio.play('door_open', { volume: 0.4 });
+              return true;
+            }
+            return false;
+          }
+        }
+        return false;
+      },
+    };
     this.enemies.init(this.map.entities);
 
     // Player

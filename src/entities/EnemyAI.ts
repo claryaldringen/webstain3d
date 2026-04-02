@@ -1,5 +1,11 @@
 import { EnemyState } from '../core/GameState.js';
-import { ENEMY_SIGHT_RANGE, ENEMY_ALERT_DELAY, ENEMY_PAIN_DURATION, TILE_SIZE } from '../core/constants.js';
+import {
+  ENEMY_SIGHT_RANGE,
+  ENEMY_ALERT_DELAY,
+  ENEMY_PAIN_DURATION,
+  ENEMY_FLEE_THRESHOLD,
+  TILE_SIZE,
+} from '../core/constants.js';
 import type { Enemy } from './Enemy.js';
 
 export function canSeeTarget(
@@ -36,11 +42,29 @@ export function transitionState(
     case EnemyState.Alert:
       return enemy.stateTimer > ENEMY_ALERT_DELAY ? EnemyState.Chase : EnemyState.Alert;
 
-    case EnemyState.Chase:
+    case EnemyState.Chase: {
+      // Low health flee (not boss or dog)
+      if (enemy.type !== 'boss' && enemy.type !== 'dog' &&
+          enemy.health < enemy.maxHealth * ENEMY_FLEE_THRESHOLD && enemy.health > 0) {
+        return EnemyState.Flee;
+      }
       if (distToPlayer < enemy.attackRange && enemy.attackCooldown <= 0 && canSeePlayer) {
         return EnemyState.Attack;
       }
-      return canSeePlayer ? EnemyState.Chase : EnemyState.Idle;
+      // Lost sight → investigate last known position
+      return canSeePlayer ? EnemyState.Chase : EnemyState.Investigate;
+    }
+
+    case EnemyState.Investigate: {
+      // If we see the player again while investigating, chase
+      if (canSeePlayer) return EnemyState.Chase;
+      // Reached last known position (handled in EnemyManager) → stay until timer expires
+      return EnemyState.Investigate;
+    }
+
+    case EnemyState.Flee:
+      if (enemy.fleeTimer <= 0) return EnemyState.Chase;
+      return EnemyState.Flee;
 
     case EnemyState.Pain:
       return enemy.painTimer <= 0 ? EnemyState.Chase : EnemyState.Pain;

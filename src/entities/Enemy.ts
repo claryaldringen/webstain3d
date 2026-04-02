@@ -18,4 +18,21 @@ export interface Enemy {
   painTimer: number;
   deathTimer: number;
   alive: boolean;
+  // AI: last known player position
+  lastKnownX: number;
+  lastKnownZ: number;
+  // AI: patrol
+  spawnX: number;
+  spawnZ: number;
+  patrolPath: { x: number; z: number }[];
+  patrolIndex: number;
+  // AI: strafing
+  strafeDir: number;
+  strafeTimer: number;
+  // AI: flee
+  fleeTimer: number;
+  // AI: chain alert depth
+  alertDepth: number;
+  // AI: boss enrage
+  enraged: boolean;
 }

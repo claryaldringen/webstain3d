@@ -56,7 +56,9 @@ export function getSpriteIndex(
       return shootFrames[frameIdx]!;
     }
 
-    case EnemyState.Chase: {
+    case EnemyState.Chase:
+    case EnemyState.Investigate:
+    case EnemyState.Flee: {
       // Walking — alternate walk frames (4 frames x 8 directions)
       const walkFrame = Math.floor(stateTimer * 4) % 4;
       const walkAnims = [spriteBase.walk1, spriteBase.walk2, spriteBase.walk3, spriteBase.walk4];

@@ -14,6 +14,8 @@ export enum EnemyState {
   Attack = 3,
   Pain = 4,
   Death = 5,
+  Investigate = 6,
+  Flee = 7,
 }
 
 export enum DoorState {

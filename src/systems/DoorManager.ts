@@ -12,11 +12,16 @@ export interface DoorInstance {
   stayTimer: number;
 }
 
-export function tryOpenDoor(door: DoorInstance, player: Player): string | null {
+export function tryOpenDoor(door: DoorInstance, player: Player | null): string | null {
   if (door.state !== DoorState.Closed) return null;
 
-  if (door.type === 'gold' && !player.hasKey('gold')) return 'locked_gold';
-  if (door.type === 'silver' && !player.hasKey('silver')) return 'locked_silver';
+  if (player) {
+    if (door.type === 'gold' && !player.hasKey('gold')) return 'locked_gold';
+    if (door.type === 'silver' && !player.hasKey('silver')) return 'locked_silver';
+  } else {
+    // AI enemies can only open normal doors
+    if (door.type !== 'normal') return null;
+  }
 
   door.state = DoorState.Opening;
   return 'opening';

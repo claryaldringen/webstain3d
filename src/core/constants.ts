@@ -108,6 +108,21 @@ export const WALL_PLACEHOLDER_ID = 3;
 // Sound
 export const GUNFIRE_ALERT_RADIUS = 20;
 
+// Enemy AI
+export const ENEMY_PATROL_SPEED_FACTOR = 0.4;
+export const ENEMY_STRAFE_SPEED_FACTOR = 0.5;
+export const ENEMY_STRAFE_INTERVAL_MIN = 1.0;
+export const ENEMY_STRAFE_INTERVAL_MAX = 2.0;
+export const ENEMY_FLEE_THRESHOLD = 0.3;
+export const ENEMY_FLEE_DURATION = 3.0;
+export const ENEMY_PUSH_RADIUS = 0.6;
+export const ENEMY_CHAIN_ALERT_RADIUS = 8;
+export const ENEMY_CHAIN_ALERT_MAX_DEPTH = 2;
+export const ENEMY_PATROL_RADIUS = 4;
+export const BOSS_ENRAGE_THRESHOLD = 0.5;
+export const BOSS_ENRAGE_SPEED_MULT = 1.5;
+export const BOSS_ENRAGE_COOLDOWN_MULT = 0.6;
+
 // Colors
 export const FLOOR_COLOR = 0x7c7c7c;
 export const CEILING_COLOR = 0x388088;
