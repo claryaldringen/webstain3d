@@ -54,6 +54,20 @@ export const VSWAP_SPRITE_MAP: Record<string, number> = {
   boss: 296,          // Hans Grosse walk frame 1 front
 };
 
+/** Decorations that block player/enemy movement (matching original Wolf3D bo_blocker). */
+export const BLOCKING_DECORATIONS = new Set([
+  'barrel_green', 'barrel',
+  'table_chairs', 'table', 'table_plain',
+  'lamp_floor',
+  'hanged_man',
+  'pillar',
+  'plant', 'plant_pot',
+  'sink',
+  'vase',
+  'suits_of_armor',
+  'cage_hanging',
+]);
+
 /**
  * Enemy sprite base indices — verified from id Software Wolf3D source (WL_DEF.H).
  * Order in VSWAP: stand(8d), walk1-4(8d each), pain1, die1-3, pain2, dead, shoot1-3.

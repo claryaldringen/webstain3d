@@ -8,6 +8,7 @@ import { generateMaze } from './generators/Maze.js';
 import { validateLevel } from './LevelValidator.js';
 import { floodFill } from './LevelValidator.js';
 import { STRUCTURAL_WALL_IDS, DECORATIVE_WALL_IDS } from '../core/constants.js';
+import { BLOCKING_DECORATIONS } from '../sprites/SpriteConfig.js';
 
 const MIN_SPAWN_ENEMY_DIST = 8;
 const AMMO_PER_CLIP = 8;
@@ -296,19 +297,51 @@ function placeItems(
   let wallIdx = 0;
   let openIdx = 0;
 
+  // Check if placing a blocking decoration here is safe (won't block a corridor).
+  // A tile is safe if it has ≥ 3 open orthogonal neighbors (always a path around).
+  const isSafeForBlocking = (pos: TilePosition): boolean => {
+    let openNeighbors = 0;
+    const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+    for (const [dx, dy] of dirs) {
+      const nx = pos.x + dx;
+      const ny = pos.y + dy;
+      if (nx >= 0 && nx < walls[0].length && ny >= 0 && ny < walls.length) {
+        if (walls[ny][nx] === 0 && !occupiedSet.has(`${nx},${ny}`)) openNeighbors++;
+      }
+    }
+    return openNeighbors >= 3;
+  };
+
+  // Also check tile isn't adjacent to a door (would block doorway)
+  const isAdjacentToDoor = (pos: TilePosition): boolean => {
+    const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+    for (const [dx, dy] of dirs) {
+      const nx = pos.x + dx;
+      const ny = pos.y + dy;
+      if (nx >= 0 && nx < walls[0].length && ny >= 0 && ny < walls.length) {
+        if (walls[ny][nx] === -1) return true;
+      }
+    }
+    return false;
+  };
+
   const placeDecorWall = (subtype: string): boolean => {
-    if (wallIdx < wallAdjacentTiles.length) {
+    const isBlocking = BLOCKING_DECORATIONS.has(subtype);
+    while (wallIdx < wallAdjacentTiles.length) {
       const pos = wallAdjacentTiles[wallIdx++];
+      if (isBlocking && (!isSafeForBlocking(pos) || isAdjacentToDoor(pos))) continue;
       items.push({ type: 'item', subtype, x: pos.x, y: pos.y });
       occupiedSet.add(`${pos.x},${pos.y}`);
       return true;
     }
-    return placeDecorOpen(subtype); // fallback to open
+    return placeDecorOpen(subtype);
   };
 
   const placeDecorOpen = (subtype: string): boolean => {
-    if (openIdx < openTiles.length) {
+    const isBlocking = BLOCKING_DECORATIONS.has(subtype);
+    while (openIdx < openTiles.length) {
       const pos = openTiles[openIdx++];
+      if (isBlocking && (!isSafeForBlocking(pos) || isAdjacentToDoor(pos))) continue;
       items.push({ type: 'item', subtype, x: pos.x, y: pos.y });
       occupiedSet.add(`${pos.x},${pos.y}`);
       return true;

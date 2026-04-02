@@ -75,11 +75,17 @@ export class EnemyManager {
   enemies: EnemyInstance[] = [];
   itemManager: ItemDropper | null = null;
   doorOpener: DoorOpener | null = null;
+  blockedTiles = new Set<string>();
 
   constructor(spriteManager: SpriteManager, map: GameMap, itemManager: ItemDropper | null = null) {
     this.spriteManager = spriteManager;
     this.map = map;
     this.itemManager = itemManager;
+  }
+
+  /** Check if tile is solid (wall, door, or blocking decoration). */
+  private isTileSolid(tx: number, ty: number): boolean {
+    return this.map.isSolid(tx, ty) || this.blockedTiles.has(`${tx},${ty}`);
   }
 
   init(entityData: EntityData[]): void {
@@ -429,13 +435,13 @@ export class EnemyManager {
     const curTileX = Math.floor(enemy.x / TILE_SIZE);
     const curTileZ = Math.floor(enemy.z / TILE_SIZE);
 
-    if (!this.map.isSolid(tileX, curTileZ)) {
+    if (!this.isTileSolid(tileX, curTileZ)) {
       enemy.x = newX;
       moved = true;
     } else {
       this.tryOpenDoorAt(enemy, tileX, curTileZ);
     }
-    if (!this.map.isSolid(curTileX, tileZ)) {
+    if (!this.isTileSolid(curTileX, tileZ)) {
       enemy.z = newZ;
       moved = true;
     } else {
@@ -457,7 +463,7 @@ export class EnemyManager {
     let movedX = false;
     let movedZ = false;
 
-    if (!this.map.isSolid(tileX, curTileZ)) {
+    if (!this.isTileSolid(tileX, curTileZ)) {
       enemy.x = newX;
       movedX = true;
     } else {
@@ -465,7 +471,7 @@ export class EnemyManager {
     }
 
     const afterMoveTileX = Math.floor(enemy.x / TILE_SIZE);
-    if (!this.map.isSolid(afterMoveTileX, tileZ)) {
+    if (!this.isTileSolid(afterMoveTileX, tileZ)) {
       enemy.z = newZ;
       movedZ = true;
     } else {
@@ -481,11 +487,11 @@ export class EnemyManager {
     // Try slide along X
     const slideX1 = enemy.x + speed;
     const slideX2 = enemy.x - speed;
-    if (!this.map.isSolid(Math.floor(slideX1 / TILE_SIZE), curTileZ)) {
+    if (!this.isTileSolid(Math.floor(slideX1 / TILE_SIZE), curTileZ)) {
       enemy.x = slideX1;
       return true;
     }
-    if (!this.map.isSolid(Math.floor(slideX2 / TILE_SIZE), curTileZ)) {
+    if (!this.isTileSolid(Math.floor(slideX2 / TILE_SIZE), curTileZ)) {
       enemy.x = slideX2;
       return true;
     }
@@ -493,11 +499,11 @@ export class EnemyManager {
     // Try slide along Z
     const slideZ1 = enemy.z + speed;
     const slideZ2 = enemy.z - speed;
-    if (!this.map.isSolid(curTileX, Math.floor(slideZ1 / TILE_SIZE))) {
+    if (!this.isTileSolid(curTileX, Math.floor(slideZ1 / TILE_SIZE))) {
       enemy.z = slideZ1;
       return true;
     }
-    if (!this.map.isSolid(curTileX, Math.floor(slideZ2 / TILE_SIZE))) {
+    if (!this.isTileSolid(curTileX, Math.floor(slideZ2 / TILE_SIZE))) {
       enemy.z = slideZ2;
       return true;
     }
@@ -536,11 +542,11 @@ export class EnemyManager {
           const pushZ = (dz / dist) * overlap;
 
           // Only push if target tile is walkable
-          if (!this.map.isSolid(Math.floor((a.x - pushX) / TILE_SIZE), Math.floor((a.z - pushZ) / TILE_SIZE))) {
+          if (!this.isTileSolid(Math.floor((a.x - pushX) / TILE_SIZE), Math.floor((a.z - pushZ) / TILE_SIZE))) {
             a.x -= pushX;
             a.z -= pushZ;
           }
-          if (!this.map.isSolid(Math.floor((b.x + pushX) / TILE_SIZE), Math.floor((b.z + pushZ) / TILE_SIZE))) {
+          if (!this.isTileSolid(Math.floor((b.x + pushX) / TILE_SIZE), Math.floor((b.z + pushZ) / TILE_SIZE))) {
             b.x += pushX;
             b.z += pushZ;
           }
@@ -563,7 +569,7 @@ export class EnemyManager {
       for (let dx = -ENEMY_PATROL_RADIUS; dx <= ENEMY_PATROL_RADIUS; dx++) {
         const tx = spawnTileX + dx;
         const tz = spawnTileZ + dy;
-        if (!this.map.isSolid(tx, tz) && (dx !== 0 || dy !== 0)) {
+        if (!this.isTileSolid(tx, tz) && (dx !== 0 || dy !== 0)) {
           candidates.push({ x: (tx + 0.5) * TILE_SIZE, z: (tz + 0.5) * TILE_SIZE });
         }
       }

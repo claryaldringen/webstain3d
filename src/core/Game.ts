@@ -20,6 +20,7 @@ import { hitEnemy } from '../entities/EnemyAI.js';
 import { drawWeaponSprite, type WeaponName } from '../assets/WeaponSprites.js';
 import { createDoorTextureByType } from '../assets/DoorTextures.js';
 import { TILE_SIZE, WALL_HEIGHT, ITEM_EFFECTS, ENEMY_DROPS, INTERACTION_RANGE, ITEM_PICKUP_RADIUS, GUNFIRE_ALERT_RADIUS, WEAPON_NAMES } from './constants.js';
+import { BLOCKING_DECORATIONS } from '../sprites/SpriteConfig.js';
 import type { DoorData, EntityData, TilePosition, LevelData } from '../types/index.js';
 import type { LevelConfig } from '../map/types.js';
 import { generateLevel } from '../map/LevelGenerator.js';
@@ -47,6 +48,7 @@ export class Game {
 
   private doors: DoorWithMesh[] = [];
   private items: ItemInstance[] = [];
+  private blockedTiles = new Set<string>();
   private weaponCooldown = 0;
   private currentLevel = 1;
 
@@ -323,6 +325,14 @@ export class Game {
       this.items.push({ subtype: e.subtype ?? '', x, z, collected: false, sprite });
     }
 
+    // Build blocked tiles set for blocking decorations
+    this.blockedTiles.clear();
+    for (const e of this.map.entities) {
+      if (e.type === 'item' && BLOCKING_DECORATIONS.has(e.subtype ?? '')) {
+        this.blockedTiles.add(`${e.x},${e.y}`);
+      }
+    }
+
     // Enemies
     const itemManagerProxy = {
       spawnDrop: (subtype: string, x: number, z: number) => {
@@ -334,6 +344,7 @@ export class Game {
       },
     };
     this.enemies = new EnemyManager(this.spriteManager, this.map);
+    this.enemies.blockedTiles = this.blockedTiles;
     this.enemies.itemManager = itemManagerProxy;
     this.enemies.doorOpener = {
       tryOpenAt: (tileX: number, tileY: number): boolean => {
@@ -364,7 +375,8 @@ export class Game {
       this.player.weapons = [...prevPlayer.weapons];
     }
     this.player.keys = { gold: false, silver: false }; // Keys don't carry over
-    this.player.setCollisionCallback((tx, ty) => this.map!.isSolid(tx, ty));
+    this.player.setCollisionCallback((tx, ty) =>
+      this.map!.isSolid(tx, ty) || this.blockedTiles.has(`${tx},${ty}`));
     this.player.spawn(data.playerStart);
 
     // Validate spawn: if player is stuck in a wall, find nearest walkable tile
