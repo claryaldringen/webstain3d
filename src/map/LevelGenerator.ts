@@ -8,7 +8,6 @@ import { generateMaze } from './generators/Maze.js';
 import { validateLevel } from './LevelValidator.js';
 import { floodFill } from './LevelValidator.js';
 import { STRUCTURAL_WALL_IDS, DECORATIVE_WALL_IDS } from '../core/constants.js';
-import { BLOCKING_DECORATIONS } from '../sprites/SpriteConfig.js';
 
 const MIN_SPAWN_ENEMY_DIST = 8;
 const AMMO_PER_CLIP = 8;
@@ -297,42 +296,19 @@ function placeItems(
   let wallIdx = 0;
   let openIdx = 0;
 
-  const w = walls[0].length;
-  const h = walls.length;
-  const isOpen = (x: number, y: number): boolean =>
-    x >= 0 && x < w && y >= 0 && y < h && walls[y][x] === 0 && !occupiedSet.has(`${x},${y}`);
-  const isDoor = (x: number, y: number): boolean =>
-    x >= 0 && x < w && y >= 0 && y < h && walls[y][x] === -1;
-
-  // A tile is safe for blocking only if it's in a room (not a corridor).
-  // Room tile = all 4 orthogonal neighbors are open (center of open area).
-  const isSafeForBlocking = (pos: TilePosition): boolean => {
-    // Must not be adjacent to a door
-    if (isDoor(pos.x-1, pos.y) || isDoor(pos.x+1, pos.y) ||
-        isDoor(pos.x, pos.y-1) || isDoor(pos.x, pos.y+1)) return false;
-    // All 4 orthogonal neighbors must be open (not wall, not occupied)
-    return isOpen(pos.x-1, pos.y) && isOpen(pos.x+1, pos.y) &&
-           isOpen(pos.x, pos.y-1) && isOpen(pos.x, pos.y+1);
-  };
-
   const placeDecorWall = (subtype: string): boolean => {
-    const isBlocking = BLOCKING_DECORATIONS.has(subtype);
-    while (wallIdx < wallAdjacentTiles.length) {
+    if (wallIdx < wallAdjacentTiles.length) {
       const pos = wallAdjacentTiles[wallIdx++];
-      if (isBlocking && !isSafeForBlocking(pos)) continue;
       items.push({ type: 'item', subtype, x: pos.x, y: pos.y });
       occupiedSet.add(`${pos.x},${pos.y}`);
       return true;
     }
-    // Non-blocking wall items can fall back to open; blocking ones cannot
-    return isBlocking ? false : placeDecorOpen(subtype);
+    return placeDecorOpen(subtype);
   };
 
   const placeDecorOpen = (subtype: string): boolean => {
-    const isBlocking = BLOCKING_DECORATIONS.has(subtype);
-    while (openIdx < openTiles.length) {
+    if (openIdx < openTiles.length) {
       const pos = openTiles[openIdx++];
-      if (isBlocking && !isSafeForBlocking(pos)) continue;
       items.push({ type: 'item', subtype, x: pos.x, y: pos.y });
       occupiedSet.add(`${pos.x},${pos.y}`);
       return true;
