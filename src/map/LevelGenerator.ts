@@ -297,20 +297,21 @@ function placeItems(
   let wallIdx = 0;
   let openIdx = 0;
 
-  // Blocking decoration is safe if it has ≥3 open orthogonal neighbors
-  // (blocking still leaves ≥2 paths around) and is not next to a door.
+  // Blocking decoration needs all 8 surrounding tiles (orthogonal + diagonal)
+  // to be open floor, not walls/doors/occupied. Ensures plenty of space around it.
   const isSafeForBlocking = (pos: TilePosition): boolean => {
-    let open = 0;
-    const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
-    for (const [dx, dy] of dirs) {
-      const nx = pos.x + dx;
-      const ny = pos.y + dy;
-      if (nx < 0 || nx >= walls[0].length || ny < 0 || ny >= walls.length) continue;
-      const v = walls[ny][nx];
-      if (v === -1) return false; // adjacent to door
-      if (v === 0 && !occupiedSet.has(`${nx},${ny}`)) open++;
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if (dx === 0 && dy === 0) continue;
+        const nx = pos.x + dx;
+        const ny = pos.y + dy;
+        if (nx < 0 || nx >= walls[0].length || ny < 0 || ny >= walls.length) return false;
+        const v = walls[ny][nx];
+        if (v !== 0) return false; // wall or door
+        if (occupiedSet.has(`${nx},${ny}`)) return false;
+      }
     }
-    return open >= 3;
+    return true;
   };
 
   const placeDecorWall = (subtype: string): boolean => {
