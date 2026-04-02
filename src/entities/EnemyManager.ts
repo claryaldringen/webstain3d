@@ -226,16 +226,24 @@ export class EnemyManager {
     }
   }
 
-  private updateAlert(enemy: EnemyInstance, player: EnemyTarget, _canSee: boolean): void {
-    const dx = player.x - enemy.x;
-    const dz = player.z - enemy.z;
-    enemy.angle = Math.atan2(-dz, dx);
+  private updateAlert(enemy: EnemyInstance, player: EnemyTarget, canSee: boolean): void {
+    if (canSee) {
+      const dx = player.x - enemy.x;
+      const dz = player.z - enemy.z;
+      enemy.angle = Math.atan2(-dz, dx);
+    }
 
     if (enemy.stateTimer > 0.5) {
-      enemy.state = EnemyState.Chase;
-      enemy.stateTimer = 0;
-      // Chain alert: notify nearby enemies
-      this.chainAlert(enemy.x, enemy.z, 1);
+      if (canSee) {
+        enemy.state = EnemyState.Chase;
+        enemy.stateTimer = 0;
+        // Chain alert: notify nearby enemies (with LOS check)
+        this.chainAlert(enemy.x, enemy.z, 1);
+      } else {
+        // Can't see player — go back to idle
+        enemy.state = EnemyState.Idle;
+        enemy.stateTimer = 0;
+      }
     }
   }
 
@@ -572,7 +580,26 @@ export class EnemyManager {
 
   // --- Alert systems ---
 
-  /** Chain alert: propagates from enemy to enemy up to max depth. */
+  /** Check if sound can travel between two points (blocked by walls but not doors). */
+  private canHearBetween(x1: number, z1: number, x2: number, z2: number): boolean {
+    const dx = x2 - x1;
+    const dz = z2 - z1;
+    const dist = Math.sqrt(dx * dx + dz * dz);
+    const steps = Math.ceil(dist / 0.5);
+    for (let i = 1; i < steps; i++) {
+      const t = i / steps;
+      const cx = x1 + dx * t;
+      const cz = z1 + dz * t;
+      const tileX = Math.floor(cx / TILE_SIZE);
+      const tileZ = Math.floor(cz / TILE_SIZE);
+      const wallVal = this.map.getWallId(tileX, tileZ);
+      // Walls (> 0) block sound, doors (-1) don't
+      if (wallVal > 0) return false;
+    }
+    return true;
+  }
+
+  /** Chain alert: propagates from enemy to enemy up to max depth (requires hearing path). */
   private chainAlert(x: number, z: number, depth: number): void {
     if (depth > ENEMY_CHAIN_ALERT_MAX_DEPTH) return;
 
@@ -583,7 +610,7 @@ export class EnemyManager {
       const dx = enemy.x - x;
       const dz = enemy.z - z;
       const dist = Math.sqrt(dx * dx + dz * dz);
-      if (dist < ENEMY_CHAIN_ALERT_RADIUS) {
+      if (dist < ENEMY_CHAIN_ALERT_RADIUS && this.canHearBetween(x, z, enemy.x, enemy.z)) {
         enemy.state = EnemyState.Alert;
         enemy.stateTimer = 0;
         enemy.alertDepth = depth;
@@ -598,7 +625,7 @@ export class EnemyManager {
         const dx = enemy.x - x;
         const dz = enemy.z - z;
         const dist = Math.sqrt(dx * dx + dz * dz);
-        if (dist < GUNFIRE_ALERT_RADIUS) {
+        if (dist < GUNFIRE_ALERT_RADIUS && this.canHearBetween(x, z, enemy.x, enemy.z)) {
           enemy.state = EnemyState.Alert;
           enemy.stateTimer = 0;
         }
