@@ -94,7 +94,10 @@ export class Player {
 
   addWeapon(weaponId: WeaponId): void {
     this.weapons[weaponId] = true;
-    this.currentWeapon = weaponId;
+    // Only switch if the new weapon is better than current
+    if (weaponId > this.currentWeapon) {
+      this.currentWeapon = weaponId;
+    }
   }
 
   get isDead(): boolean {
