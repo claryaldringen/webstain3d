@@ -297,51 +297,42 @@ function placeItems(
   let wallIdx = 0;
   let openIdx = 0;
 
-  // Check if placing a blocking decoration here is safe (won't block a corridor).
-  // A tile is safe if it has ≥ 3 open orthogonal neighbors (always a path around).
-  const isSafeForBlocking = (pos: TilePosition): boolean => {
-    let openNeighbors = 0;
-    const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
-    for (const [dx, dy] of dirs) {
-      const nx = pos.x + dx;
-      const ny = pos.y + dy;
-      if (nx >= 0 && nx < walls[0].length && ny >= 0 && ny < walls.length) {
-        if (walls[ny][nx] === 0 && !occupiedSet.has(`${nx},${ny}`)) openNeighbors++;
-      }
-    }
-    return openNeighbors >= 3;
-  };
+  const w = walls[0].length;
+  const h = walls.length;
+  const isOpen = (x: number, y: number): boolean =>
+    x >= 0 && x < w && y >= 0 && y < h && walls[y][x] === 0 && !occupiedSet.has(`${x},${y}`);
+  const isDoor = (x: number, y: number): boolean =>
+    x >= 0 && x < w && y >= 0 && y < h && walls[y][x] === -1;
 
-  // Also check tile isn't adjacent to a door (would block doorway)
-  const isAdjacentToDoor = (pos: TilePosition): boolean => {
-    const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
-    for (const [dx, dy] of dirs) {
-      const nx = pos.x + dx;
-      const ny = pos.y + dy;
-      if (nx >= 0 && nx < walls[0].length && ny >= 0 && ny < walls.length) {
-        if (walls[ny][nx] === -1) return true;
-      }
-    }
-    return false;
+  // A tile is safe for blocking only if it's in a room (not a corridor).
+  // Room tile = all 4 orthogonal neighbors are open (center of open area).
+  const isSafeForBlocking = (pos: TilePosition): boolean => {
+    // Must not be adjacent to a door
+    if (isDoor(pos.x-1, pos.y) || isDoor(pos.x+1, pos.y) ||
+        isDoor(pos.x, pos.y-1) || isDoor(pos.x, pos.y+1)) return false;
+    // All 4 orthogonal neighbors must be open (not wall, not occupied)
+    return isOpen(pos.x-1, pos.y) && isOpen(pos.x+1, pos.y) &&
+           isOpen(pos.x, pos.y-1) && isOpen(pos.x, pos.y+1);
   };
 
   const placeDecorWall = (subtype: string): boolean => {
     const isBlocking = BLOCKING_DECORATIONS.has(subtype);
     while (wallIdx < wallAdjacentTiles.length) {
       const pos = wallAdjacentTiles[wallIdx++];
-      if (isBlocking && (!isSafeForBlocking(pos) || isAdjacentToDoor(pos))) continue;
+      if (isBlocking && !isSafeForBlocking(pos)) continue;
       items.push({ type: 'item', subtype, x: pos.x, y: pos.y });
       occupiedSet.add(`${pos.x},${pos.y}`);
       return true;
     }
-    return placeDecorOpen(subtype);
+    // Non-blocking wall items can fall back to open; blocking ones cannot
+    return isBlocking ? false : placeDecorOpen(subtype);
   };
 
   const placeDecorOpen = (subtype: string): boolean => {
     const isBlocking = BLOCKING_DECORATIONS.has(subtype);
     while (openIdx < openTiles.length) {
       const pos = openTiles[openIdx++];
-      if (isBlocking && (!isSafeForBlocking(pos) || isAdjacentToDoor(pos))) continue;
+      if (isBlocking && !isSafeForBlocking(pos)) continue;
       items.push({ type: 'item', subtype, x: pos.x, y: pos.y });
       occupiedSet.add(`${pos.x},${pos.y}`);
       return true;
@@ -373,15 +364,15 @@ function placeItems(
     placeDecorWall(grimDecoTypes[i % grimDecoTypes.length]);
   }
 
-  // Furniture: tables, sinks (open or wall)
-  const furnitureTypes = ['table_chairs', 'table_plain', 'sink'];
-  const furnitureCount = Math.max(2, Math.floor(decorScale * 1.5));
-  for (let i = 0; i < furnitureCount; i++) {
-    if (i % 2 === 0) {
-      placeDecorOpen(furnitureTypes[i % furnitureTypes.length]);
-    } else {
-      placeDecorWall(furnitureTypes[i % furnitureTypes.length]);
-    }
+  // Furniture: tables in rooms, sinks against walls
+  const tableTypes = ['table_chairs', 'table_plain'];
+  const tableCount = Math.max(1, Math.floor(decorScale * 1));
+  for (let i = 0; i < tableCount; i++) {
+    placeDecorOpen(tableTypes[i % tableTypes.length]);
+  }
+  const sinkCount = Math.max(1, Math.floor(decorScale * 0.5));
+  for (let i = 0; i < sinkCount; i++) {
+    placeDecorWall('sink');
   }
 
   // Puddles in open areas (rare)
