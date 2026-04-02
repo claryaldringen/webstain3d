@@ -281,38 +281,6 @@ export class Game {
       const closedPosition = mesh.position.clone();
       this.renderer.scene.add(mesh);
 
-      // Create door frame side walls
-      // Door frame needs wall faces on the sides perpendicular to the approach direction
-      // Horizontal door (slides E/W, approached from N/S): needs E and W frame faces
-      // Vertical door (slides N/S, approached from E/W): needs N and S frame faces
-      const frameGeo = new THREE.PlaneGeometry(TILE_SIZE, WALL_HEIGHT);
-      const adjacentWallId = Math.abs(this.map.getWallId(
-        orientation === 'vertical' ? d.x + 1 : d.x,
-        orientation === 'vertical' ? d.y : d.y + 1,
-      )) || 3;
-      const frameMat = this.map.getWallMaterial(adjacentWallId);
-      frameMat.side = THREE.DoubleSide;
-
-      if (orientation === 'horizontal') {
-        // Horizontal door: add east and west frame faces (depth of doorway)
-        const eastFrame = new THREE.Mesh(frameGeo.clone(), frameMat);
-        eastFrame.rotation.y = Math.PI / 2;
-        eastFrame.position.set(d.x * TILE_SIZE + TILE_SIZE, WALL_HEIGHT / 2, d.y * TILE_SIZE + TILE_SIZE / 2);
-        this.renderer.scene.add(eastFrame);
-        const westFrame = new THREE.Mesh(frameGeo.clone(), frameMat);
-        westFrame.rotation.y = Math.PI / 2;
-        westFrame.position.set(d.x * TILE_SIZE, WALL_HEIGHT / 2, d.y * TILE_SIZE + TILE_SIZE / 2);
-        this.renderer.scene.add(westFrame);
-      } else {
-        // Vertical door: add north and south frame faces (depth of doorway)
-        const northFrame = new THREE.Mesh(frameGeo.clone(), frameMat);
-        northFrame.position.set(d.x * TILE_SIZE + TILE_SIZE / 2, WALL_HEIGHT / 2, d.y * TILE_SIZE);
-        this.renderer.scene.add(northFrame);
-        const southFrame = new THREE.Mesh(frameGeo.clone(), frameMat);
-        southFrame.position.set(d.x * TILE_SIZE + TILE_SIZE / 2, WALL_HEIGHT / 2, d.y * TILE_SIZE + TILE_SIZE);
-        this.renderer.scene.add(southFrame);
-      }
-
       this.doors.push({
         x: d.x,
         y: d.y,
@@ -432,13 +400,17 @@ export class Game {
 
     // Door interaction
     if (this.input.isInteracting()) {
+      // Check tile the player is looking at AND the tile the player is standing on
       const lookX = this.player.x + (-Math.sin(this.player.angle)) * INTERACTION_RANGE;
       const lookZ = this.player.z + (-Math.cos(this.player.angle)) * INTERACTION_RANGE;
-      const tileX = Math.floor(lookX / TILE_SIZE);
-      const tileZ = Math.floor(lookZ / TILE_SIZE);
+      const lookTileX = Math.floor(lookX / TILE_SIZE);
+      const lookTileZ = Math.floor(lookZ / TILE_SIZE);
+      const standTileX = Math.floor(this.player.x / TILE_SIZE);
+      const standTileZ = Math.floor(this.player.z / TILE_SIZE);
 
       for (const door of this.doors) {
-        if (door.x === tileX && door.y === tileZ) {
+        if ((door.x === lookTileX && door.y === lookTileZ) ||
+            (door.x === standTileX && door.y === standTileZ)) {
           const result = tryOpenDoor(door, this.player);
           if (result === 'opening') {
             this.audio.play('door_open', { volume: 0.6 });
@@ -461,12 +433,23 @@ export class Game {
 
     // Update doors
     for (const door of this.doors) {
+      // Prevent door from closing on the player
+      if (door.state === DoorState.Closing) {
+        const doorCenterX = (door.x + 0.5) * TILE_SIZE;
+        const doorCenterZ = (door.y + 0.5) * TILE_SIZE;
+        const dx = this.player.x - doorCenterX;
+        const dz = this.player.z - doorCenterZ;
+        if (Math.abs(dx) < TILE_SIZE * 0.6 && Math.abs(dz) < TILE_SIZE * 0.6) {
+          // Player is in the door tile — reopen
+          door.state = DoorState.Opening;
+        }
+      }
       updateDoorState(door, dt);
-      // Update collision: open doors are passable
-      if (door.state === DoorState.Open) {
-        this.map.walls[door.y]![door.x] = 0;
-      } else if (door.state === DoorState.Closed) {
+      // Doors are passable whenever not fully closed
+      if (door.state === DoorState.Closed) {
         this.map.walls[door.y]![door.x] = -1;
+      } else {
+        this.map.walls[door.y]![door.x] = 0;
       }
       // Animate door mesh (slide open/closed)
       const offset = door.progress * TILE_SIZE;
