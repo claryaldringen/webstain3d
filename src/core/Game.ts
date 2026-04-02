@@ -212,6 +212,7 @@ export class Game {
       }
     } catch {
       // Fallback: try config-based generation, then default procedural
+      const lvl = this.currentLevel;
       let config: LevelConfig;
       try {
         const configResp = await fetch(assetUrl(`data/level-configs/level${this.currentLevel}.json`));
@@ -221,7 +222,6 @@ export class Game {
           throw new Error('No config');
         }
       } catch {
-        const lvl = this.currentLevel;
         // Progressive difficulty: introduce enemy types as levels advance
         const enemyTypes: Record<string, number> = { guard: 3, dog: 1 };
         if (lvl >= 2) enemyTypes.ss = 1;
