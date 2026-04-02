@@ -72,6 +72,7 @@ export class Game {
       death: document.getElementById('screen-death'),
       complete: document.getElementById('screen-complete'),
       pause: document.getElementById('screen-pause'),
+      loading: document.getElementById('screen-loading'),
     };
 
     this.initMenu();
@@ -181,6 +182,7 @@ export class Game {
   private async startGame(): Promise<void> {
     if (this.state !== GameState.Title) return;
     this.state = GameState.Loading;
+    this.showScreen('loading');
 
     this.audio.init();
     this.audio.generateSounds();
@@ -190,8 +192,22 @@ export class Game {
     this.showScreen(null);
   }
 
+  private setLoadingProgress(percent: number, text?: string): void {
+    const bar = document.getElementById('loading-bar');
+    const label = document.getElementById('loading-text');
+    if (bar) bar.style.width = `${percent}%`;
+    if (label && text) label.textContent = text;
+  }
+
+  /** Yield to browser so loading UI can repaint. */
+  private tick(): Promise<void> {
+    return new Promise(r => requestAnimationFrame(() => r()));
+  }
+
   private async initLevel(): Promise<void> {
     this.renderer.clearLevel();
+    this.setLoadingProgress(0, 'Loading assets...');
+    await this.tick();
 
     // Load VSWAP
     try {
@@ -200,6 +216,8 @@ export class Game {
     } catch {
       this.vswap = null;
     }
+    this.setLoadingProgress(20, 'Generating level...');
+    await this.tick();
 
     // Load map with textures
     this.map = new GameMap(this.renderer);
@@ -255,6 +273,9 @@ export class Game {
 
       data = await this.map.loadFromData(levelData);
     }
+
+    this.setLoadingProgress(50, 'Building geometry...');
+    await this.tick();
 
     // Sprites
     this.spriteManager = new SpriteManager(this.renderer, this.vswap);
@@ -324,6 +345,9 @@ export class Game {
       });
       this.items.push({ subtype: e.subtype ?? '', x, z, collected: false, sprite });
     }
+
+    this.setLoadingProgress(70, 'Spawning entities...');
+    await this.tick();
 
     // Build blocked tiles set for blocking decorations
     this.blockedTiles.clear();
@@ -418,6 +442,8 @@ export class Game {
 
     this.weaponCooldown = 0;
     this.levelStartTime = performance.now();
+    this.setLoadingProgress(100, 'Get psyched!');
+    await this.tick();
   }
 
   private gameLoop(time: number): void {
@@ -446,9 +472,10 @@ export class Game {
         if (this.input.anyKey()) {
           this.currentLevel++;
           this.state = GameState.Loading;
-          this.showScreen(null);
+          this.showScreen('loading');
           this.initLevel().then(() => {
             this.state = GameState.Playing;
+            this.showScreen(null);
             this.levelStartTime = performance.now();
           });
         }

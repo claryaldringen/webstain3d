@@ -164,6 +164,15 @@
         <div id="level-stats" style="text-align:left;margin-top:20px;color:#FCFC54;font-family:monospace;font-size:18px;"></div>
         <p style="margin-top:30px;color:#808080;font-family:monospace;animation:blink 1s infinite;">PRESS ANY KEY</p>
     </div>
+    <div id="screen-loading" class="screen-overlay" style="display:none;background:#000;">
+        <div style="text-align:center;">
+            <h1 style="font-size:36px;color:#FCFC54;font-family:monospace;text-shadow:2px 2px #000;">LOADING</h1>
+            <div id="loading-bar-container" style="margin-top:30px;width:300px;height:16px;border:2px solid #FCFC54;background:#111;margin-left:auto;margin-right:auto;">
+                <div id="loading-bar" style="width:0%;height:100%;background:#CC0000;transition:width 0.2s;"></div>
+            </div>
+            <p id="loading-text" style="margin-top:16px;color:#808080;font-family:monospace;font-size:12px;">Preparing level...</p>
+        </div>
+    </div>
     <div id="screen-pause" class="screen-overlay" style="display:none;background:rgba(0,0,0,0.9);">
         <h1 style="font-size:48px;color:#FCFC54;font-family:monospace;">PAUSED</h1>
         <p style="margin-top:20px;color:#808080;font-family:monospace;">Press ESC to resume</p>
