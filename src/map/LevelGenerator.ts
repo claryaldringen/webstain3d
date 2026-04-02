@@ -261,14 +261,16 @@ function placeItems(
 
   // Place health items based on density
   const healthCount = Math.max(1, Math.floor(enemies.length * cfg.itemDensity * 0.5));
+  const healthTypes = ['food', 'first_aid', 'medkit'];
   for (let i = 0; i < healthCount; i++) {
-    placeItem('health_kit');
+    placeItem(healthTypes[i % healthTypes.length]);
   }
 
   // Place some treasure
+  const treasureTypes = ['cross', 'chalice', 'chest', 'crown'];
   const treasureCount = Math.max(1, Math.floor(cfg.itemDensity * 3));
   for (let i = 0; i < treasureCount; i++) {
-    placeItem('treasure');
+    placeItem(treasureTypes[i % treasureTypes.length]);
   }
 
   // Place some lamps for atmosphere

@@ -181,10 +181,7 @@ export class Game {
     this.state = GameState.Loading;
 
     this.audio.init();
-    const sounds = ['pistol', 'machinegun', 'knife', 'door_open', 'pickup', 'enemy_die', 'player_pain', 'secret', 'no_key'];
-    for (const s of sounds) {
-      this.audio.loadSound(s, assetUrl(`assets/sounds/${s}.wav`));
-    }
+    this.audio.generateSounds();
 
     await this.initLevel();
     this.state = GameState.Playing;
@@ -442,7 +439,12 @@ export class Game {
 
       for (const door of this.doors) {
         if (door.x === tileX && door.y === tileZ) {
-          tryOpenDoor(door, this.player);
+          const result = tryOpenDoor(door, this.player);
+          if (result === 'opening') {
+            this.audio.play('door_open', { volume: 0.6 });
+          } else if (result === 'locked_gold' || result === 'locked_silver') {
+            this.audio.play('no_key', { volume: 0.7 });
+          }
           break;
         }
       }
@@ -484,6 +486,7 @@ export class Game {
       if (checkPickup(item, this.player.x, this.player.z)) {
         if (applyItemEffect(item.subtype, this.player)) {
           item.collected = true;
+          this.audio.play('pickup', { volume: 0.7 });
           if (item.sprite) {
             this.spriteManager.remove(item.sprite);
           }
@@ -491,8 +494,18 @@ export class Game {
       }
     }
 
-    // Update enemies
-    this.enemies.update(dt, this.player);
+    // Update enemies (with audio proxy for player damage sound)
+    const player = this.player;
+    const audio = this.audio;
+    const playerWithAudio = {
+      get x() { return player.x; },
+      get z() { return player.z; },
+      takeDamage(amount: number) {
+        player.takeDamage(amount);
+        audio.play('player_pain', { volume: 0.6 });
+      },
+    };
+    this.enemies.update(dt, playerWithAudio);
 
     // Weapon system
     this.weaponCooldown = updateWeaponCooldown(this.weaponCooldown, dt);
@@ -513,6 +526,15 @@ export class Game {
         this.weaponCooldown = WEAPON_FIRE_RATES[weapon];
         if (this.weaponOverlay) this.weaponOverlay.setFiring(true);
 
+        // Weapon sound
+        const weaponSounds: Record<number, string> = {
+          [WeaponId.Knife]: 'knife',
+          [WeaponId.Pistol]: 'pistol',
+          [WeaponId.MachineGun]: 'machinegun',
+          [WeaponId.Chaingun]: 'machinegun',
+        };
+        this.audio.play(weaponSounds[weapon] ?? 'pistol', { volume: 0.8 });
+
         // Alert nearby enemies
         this.enemies.alertNearby(this.player.x, this.player.z);
 
@@ -525,6 +547,10 @@ export class Game {
         if (target) {
           const damage = WEAPON_DAMAGE_MIN + Math.random() * (WEAPON_DAMAGE_MAX - WEAPON_DAMAGE_MIN);
           this.enemies.hitEnemy(target as any, Math.round(damage), this.player);
+          const enemy = target as any;
+          if (enemy.health <= 0) {
+            this.audio.playSpatial('enemy_die', this.player.x, this.player.z, enemy.x, enemy.z, 30);
+          }
         }
       }
     }
