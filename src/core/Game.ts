@@ -20,6 +20,7 @@ import { hitEnemy } from '../entities/EnemyAI.js';
 import { drawWeaponSprite, type WeaponName } from '../assets/WeaponSprites.js';
 import { createDoorTextureByType } from '../assets/DoorTextures.js';
 import { TILE_SIZE, WALL_HEIGHT, ITEM_EFFECTS, ENEMY_DROPS, INTERACTION_RANGE, ITEM_PICKUP_RADIUS, GUNFIRE_ALERT_RADIUS, WEAPON_NAMES } from './constants.js';
+import { BLOCKING_DECORATIONS } from '../sprites/SpriteConfig.js';
 import type { DoorData, EntityData, TilePosition, LevelData } from '../types/index.js';
 import type { LevelConfig } from '../map/types.js';
 import { generateLevel } from '../map/LevelGenerator.js';
@@ -348,9 +349,13 @@ export class Game {
     this.setLoadingProgress(70, 'Spawning entities...');
     await this.tick();
 
-    // Decorations are non-blocking in procedurally generated levels
-    // (proper blocking requires hand-designed placement like original Wolf3D)
+    // Mark blocking decoration tiles as solid for collision
     this.blockedTiles.clear();
+    for (const e of this.map.entities) {
+      if (e.type === 'item' && BLOCKING_DECORATIONS.has(e.subtype ?? '')) {
+        this.blockedTiles.add(`${e.x},${e.y}`);
+      }
+    }
 
     // Enemies
     const itemManagerProxy = {

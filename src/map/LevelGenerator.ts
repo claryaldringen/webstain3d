@@ -8,6 +8,7 @@ import { generateMaze } from './generators/Maze.js';
 import { validateLevel } from './LevelValidator.js';
 import { floodFill } from './LevelValidator.js';
 import { STRUCTURAL_WALL_IDS, DECORATIVE_WALL_IDS } from '../core/constants.js';
+import { BLOCKING_DECORATIONS } from '../sprites/SpriteConfig.js';
 
 const MIN_SPAWN_ENEMY_DIST = 8;
 const AMMO_PER_CLIP = 8;
@@ -296,9 +297,27 @@ function placeItems(
   let wallIdx = 0;
   let openIdx = 0;
 
+  // Blocking decoration is safe if it has ≥3 open orthogonal neighbors
+  // (blocking still leaves ≥2 paths around) and is not next to a door.
+  const isSafeForBlocking = (pos: TilePosition): boolean => {
+    let open = 0;
+    const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+    for (const [dx, dy] of dirs) {
+      const nx = pos.x + dx;
+      const ny = pos.y + dy;
+      if (nx < 0 || nx >= walls[0].length || ny < 0 || ny >= walls.length) continue;
+      const v = walls[ny][nx];
+      if (v === -1) return false; // adjacent to door
+      if (v === 0 && !occupiedSet.has(`${nx},${ny}`)) open++;
+    }
+    return open >= 3;
+  };
+
   const placeDecorWall = (subtype: string): boolean => {
-    if (wallIdx < wallAdjacentTiles.length) {
+    const needsSafe = BLOCKING_DECORATIONS.has(subtype);
+    while (wallIdx < wallAdjacentTiles.length) {
       const pos = wallAdjacentTiles[wallIdx++];
+      if (needsSafe && !isSafeForBlocking(pos)) continue;
       items.push({ type: 'item', subtype, x: pos.x, y: pos.y });
       occupiedSet.add(`${pos.x},${pos.y}`);
       return true;
@@ -307,8 +326,10 @@ function placeItems(
   };
 
   const placeDecorOpen = (subtype: string): boolean => {
-    if (openIdx < openTiles.length) {
+    const needsSafe = BLOCKING_DECORATIONS.has(subtype);
+    while (openIdx < openTiles.length) {
       const pos = openTiles[openIdx++];
+      if (needsSafe && !isSafeForBlocking(pos)) continue;
       items.push({ type: 'item', subtype, x: pos.x, y: pos.y });
       occupiedSet.add(`${pos.x},${pos.y}`);
       return true;
