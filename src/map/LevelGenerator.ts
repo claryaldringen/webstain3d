@@ -273,10 +273,88 @@ function placeItems(
     placeItem(treasureTypes[i % treasureTypes.length]);
   }
 
-  // Place some lamps for atmosphere
-  const lampCount = Math.max(1, Math.floor(cfg.itemDensity * 4));
-  for (let i = 0; i < lampCount; i++) {
-    placeItem('lamp');
+  // --- Decorations ---
+  // Separate tiles into wall-adjacent (good for props along walls) and open (center of rooms)
+  const wallAdjacentTiles: TilePosition[] = [];
+  const openTiles: TilePosition[] = [];
+  for (let i = idx; i < available.length; i++) {
+    const t = available[i];
+    const adjWall =
+      walls[t.y - 1]?.[t.x] !== undefined && walls[t.y - 1][t.x] > 0 ||
+      walls[t.y + 1]?.[t.x] !== undefined && walls[t.y + 1][t.x] > 0 ||
+      walls[t.y]?.[t.x - 1] !== undefined && walls[t.y][t.x - 1] > 0 ||
+      walls[t.y]?.[t.x + 1] !== undefined && walls[t.y][t.x + 1] > 0;
+    if (adjWall) {
+      wallAdjacentTiles.push(t);
+    } else {
+      openTiles.push(t);
+    }
+  }
+  rng.shuffle(wallAdjacentTiles);
+  rng.shuffle(openTiles);
+
+  let wallIdx = 0;
+  let openIdx = 0;
+
+  const placeDecorWall = (subtype: string): boolean => {
+    if (wallIdx < wallAdjacentTiles.length) {
+      const pos = wallAdjacentTiles[wallIdx++];
+      items.push({ type: 'item', subtype, x: pos.x, y: pos.y });
+      occupiedSet.add(`${pos.x},${pos.y}`);
+      return true;
+    }
+    return placeDecorOpen(subtype); // fallback to open
+  };
+
+  const placeDecorOpen = (subtype: string): boolean => {
+    if (openIdx < openTiles.length) {
+      const pos = openTiles[openIdx++];
+      items.push({ type: 'item', subtype, x: pos.x, y: pos.y });
+      occupiedSet.add(`${pos.x},${pos.y}`);
+      return true;
+    }
+    return false;
+  };
+
+  // Scale decoration count by floor tile count (more space = more props)
+  const decorScale = Math.max(1, floorTiles.length / 40);
+
+  // Lighting: chandeliers and lamps spread throughout
+  const lightTypes = ['chandelier', 'lamp', 'lamp_ceil', 'lamp_floor'];
+  const lightCount = Math.max(4, Math.floor(decorScale * 3));
+  for (let i = 0; i < lightCount; i++) {
+    placeDecorOpen(lightTypes[i % lightTypes.length]);
+  }
+
+  // Wall-adjacent decorations: barrels, suits of armor, plants, skeletons
+  const wallDecoTypes = ['barrel_green', 'plant', 'suits_of_armor', 'plant_pot', 'pillar', 'vase'];
+  const wallDecoCount = Math.max(4, Math.floor(decorScale * 4));
+  for (let i = 0; i < wallDecoCount; i++) {
+    placeDecorWall(wallDecoTypes[i % wallDecoTypes.length]);
+  }
+
+  // Grim decorations: bones, skeletons, cages
+  const grimDecoTypes = ['bones', 'bones_blood', 'skeleton', 'cage_hanging', 'skeleton_cage', 'hanged_man'];
+  const grimCount = Math.max(2, Math.floor(decorScale * 2));
+  for (let i = 0; i < grimCount; i++) {
+    placeDecorWall(grimDecoTypes[i % grimDecoTypes.length]);
+  }
+
+  // Furniture: tables, sinks (open or wall)
+  const furnitureTypes = ['table_chairs', 'table_plain', 'sink'];
+  const furnitureCount = Math.max(2, Math.floor(decorScale * 1.5));
+  for (let i = 0; i < furnitureCount; i++) {
+    if (i % 2 === 0) {
+      placeDecorOpen(furnitureTypes[i % furnitureTypes.length]);
+    } else {
+      placeDecorWall(furnitureTypes[i % furnitureTypes.length]);
+    }
+  }
+
+  // Puddles in open areas (rare)
+  const puddleCount = Math.max(1, Math.floor(decorScale * 0.5));
+  for (let i = 0; i < puddleCount; i++) {
+    placeDecorOpen('puddle');
   }
 
   return items;

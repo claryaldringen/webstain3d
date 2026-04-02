@@ -307,6 +307,14 @@ export class Game {
         key_gold: '#FFD700', key_silver: '#C0C0C0',
         machine_gun: '#888888', chaingun: '#888888',
         extra_life: '#44FF44',
+        // Decorations (fallback colors if VSWAP unavailable)
+        puddle: '#334488', barrel_green: '#446633', table_chairs: '#8B6914',
+        lamp_floor: '#CCAA44', chandelier: '#CCAA44', lamp: '#CCAA44', lamp_ceil: '#CCAA44',
+        hanged_man: '#884444', bones_blood: '#AA4444', pillar: '#AAAAAA',
+        plant: '#44AA44', plant_pot: '#44AA44', skeleton: '#DDDDBB',
+        sink: '#AABBCC', vase: '#AA8844', table_plain: '#8B6914',
+        suits_of_armor: '#888888', cage_hanging: '#666666',
+        skeleton_cage: '#BBBB99', bones: '#DDDDBB',
       };
       const sprite = this.spriteManager.create(`assets/sprites/item_${e.subtype ?? ''}.png`, x, z, {
         width: 1.0, height: 1.0, anchorBottom: true,
