@@ -344,10 +344,52 @@ export class Game {
     };
     this.enemies.init(this.map.entities);
 
-    // Player
+    // Player — preserve stats between levels
+    const prevPlayer = this.player;
     this.player = new Player();
+    if (prevPlayer && this.currentLevel > 1) {
+      this.player.health = prevPlayer.health;
+      this.player.lives = prevPlayer.lives;
+      this.player.ammo = prevPlayer.ammo;
+      this.player.score = prevPlayer.score;
+      this.player.currentWeapon = prevPlayer.currentWeapon;
+      this.player.weapons = [...prevPlayer.weapons];
+    }
+    this.player.keys = { gold: false, silver: false }; // Keys don't carry over
     this.player.setCollisionCallback((tx, ty) => this.map!.isSolid(tx, ty));
     this.player.spawn(data.playerStart);
+
+    // Validate spawn: if player is stuck in a wall, find nearest walkable tile
+    if (this.map.isSolid(Math.floor(this.player.x / TILE_SIZE), Math.floor(this.player.z / TILE_SIZE))) {
+      const w = this.map.width;
+      const h = this.map.height;
+      let bestDist = Infinity;
+      let bestX = this.player.x;
+      let bestZ = this.player.z;
+      for (let ty = 1; ty < h - 1; ty++) {
+        for (let tx = 1; tx < w - 1; tx++) {
+          if (!this.map.isSolid(tx, ty)) {
+            const cx = (tx + 0.5) * TILE_SIZE;
+            const cz = (ty + 0.5) * TILE_SIZE;
+            const dx = cx - this.player.x;
+            const dz = cz - this.player.z;
+            const dist = dx * dx + dz * dz;
+            if (dist < bestDist) {
+              bestDist = dist;
+              bestX = cx;
+              bestZ = cz;
+            }
+          }
+        }
+      }
+      this.player.x = bestX;
+      this.player.z = bestZ;
+    }
+
+    // Sync camera to spawn position immediately
+    this.renderer.camera.position.x = this.player.x;
+    this.renderer.camera.position.z = this.player.z;
+    this.renderer.camera.rotation.y = this.player.angle;
 
     // Weapon overlay
     if (this.weaponOverlay) this.weaponOverlay.destroy();
