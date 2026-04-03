@@ -1,6 +1,21 @@
 import * as THREE from 'three';
 import { PLAYER_HEIGHT, WALL_HEIGHT } from '../core/constants.js';
+import { ENEMY_SPRITE_BASE } from '../sprites/SpriteConfig.js';
+import type { EnemySpriteSet } from '../sprites/SpriteConfig.js';
+import type { VSwapLoader } from '../assets/VSwapLoader.js';
 import type { PlayerSnapshot } from '../../shared/protocol.js';
+
+// Weapon → enemy sprite set mapping
+const WEAPON_SKIN: Record<number, string> = {
+  0: 'dog',    // knife → dog
+  1: 'guard',  // pistol → guard
+  2: 'ss',     // machine gun → SS
+  3: 'boss',   // chaingun → Hans Grosse (boss)
+};
+
+const WALK_FRAMES = ['walk1', 'walk2', 'walk3', 'walk4'] as const;
+const SHOOT_FRAMES = ['shoot1', 'shoot2', 'shoot3'] as const;
+const ANIM_SPEED = 6;
 
 interface RemotePlayer {
   sprite: THREE.Sprite;
@@ -8,6 +23,10 @@ interface RemotePlayer {
   lastSnapshot: PlayerSnapshot;
   prevSnapshot: PlayerSnapshot | null;
   interpTime: number;
+  animTimer: number;
+  animFrame: number;
+  currentSpriteIdx: number;
+  lastWeapon: number;
 }
 
 const INTERP_DURATION = 0.05; // 50ms = 20Hz tick
@@ -16,9 +35,16 @@ export class RemotePlayerRenderer {
   private scene: THREE.Scene;
   private players = new Map<string, RemotePlayer>();
   private myId = '';
+  private vswap: VSwapLoader | null = null;
+  private textureCache = new Map<number, THREE.Texture>();
 
-  constructor(scene: THREE.Scene) {
+  constructor(scene: THREE.Scene, vswap?: VSwapLoader | null) {
     this.scene = scene;
+    this.vswap = vswap ?? null;
+  }
+
+  setVSwap(vswap: VSwapLoader | null): void {
+    this.vswap = vswap;
   }
 
   setMyId(id: string): void {
@@ -45,6 +71,16 @@ export class RemotePlayerRenderer {
 
       rp.sprite.visible = snap.alive;
       rp.label.visible = snap.alive;
+
+      // Animate
+      rp.animTimer += dt;
+      if (rp.animTimer >= 1 / ANIM_SPEED) {
+        rp.animTimer -= 1 / ANIM_SPEED;
+        rp.animFrame++;
+      }
+
+      // Pick sprite frame
+      this.updateSpriteTexture(rp, snap);
     }
 
     // Remove players no longer in snapshot
@@ -78,26 +114,64 @@ export class RemotePlayerRenderer {
     }
   }
 
-  private createPlayer(snap: PlayerSnapshot): RemotePlayer {
-    // Billboard sprite for other players (always faces camera)
+  private updateSpriteTexture(rp: RemotePlayer, snap: PlayerSnapshot): void {
+    const skinType = WEAPON_SKIN[snap.weapon] ?? 'guard';
+    const spriteSet = ENEMY_SPRITE_BASE[skinType] as EnemySpriteSet | undefined;
+    if (!spriteSet) return;
+
+    // Determine if player is moving
+    const isMoving = rp.prevSnapshot &&
+      (Math.abs(snap.x - rp.prevSnapshot.x) > 0.01 || Math.abs(snap.z - rp.prevSnapshot.z) > 0.01);
+
+    let frameKey: string;
+    if (snap.shooting) {
+      frameKey = SHOOT_FRAMES[Math.min(rp.animFrame % SHOOT_FRAMES.length, SHOOT_FRAMES.length - 1)]!;
+    } else if (isMoving) {
+      frameKey = WALK_FRAMES[rp.animFrame % WALK_FRAMES.length]!;
+    } else {
+      frameKey = 'stand';
+    }
+
+    const spriteIdx = (spriteSet as any)[frameKey] ?? spriteSet.stand;
+    if (spriteIdx == null || spriteIdx === rp.currentSpriteIdx) return;
+
+    const tex = this.getTexture(spriteIdx);
+    if (tex) {
+      (rp.sprite.material as THREE.SpriteMaterial).map = tex;
+      (rp.sprite.material as THREE.SpriteMaterial).needsUpdate = true;
+      rp.currentSpriteIdx = spriteIdx;
+    }
+  }
+
+  private getTexture(spriteIndex: number): THREE.Texture | null {
+    if (this.textureCache.has(spriteIndex)) {
+      return this.textureCache.get(spriteIndex)!;
+    }
+    if (!this.vswap) return null;
+    const pixels = this.vswap.getSpriteTexture(spriteIndex);
+    if (!pixels) return null;
+
     const canvas = document.createElement('canvas');
-    canvas.width = 32;
-    canvas.height = 40;
+    canvas.width = 64;
+    canvas.height = 64;
     const ctx = canvas.getContext('2d')!;
+    const imageData = ctx.createImageData(64, 64);
+    imageData.data.set(pixels);
+    ctx.putImageData(imageData, 0, 0);
 
-    // Draw a simple player silhouette
-    ctx.fillStyle = '#3366CC';
-    ctx.fillRect(8, 0, 16, 12); // head
-    ctx.fillRect(4, 12, 24, 20); // body
-    ctx.fillRect(4, 32, 10, 8); // left leg
-    ctx.fillRect(18, 32, 10, 8); // right leg
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.magFilter = THREE.NearestFilter;
+    tex.minFilter = THREE.NearestFilter;
+    tex.generateMipmaps = false;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    this.textureCache.set(spriteIndex, tex);
+    return tex;
+  }
 
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.magFilter = THREE.NearestFilter;
-    texture.minFilter = THREE.NearestFilter;
-    const mat = new THREE.SpriteMaterial({ map: texture, transparent: true });
+  private createPlayer(snap: PlayerSnapshot): RemotePlayer {
+    const mat = new THREE.SpriteMaterial({ transparent: true });
     const sprite = new THREE.Sprite(mat);
-    sprite.scale.set(0.8, 1.0, 1);
+    sprite.scale.set(0.9, 0.9, 1);
     sprite.position.set(snap.x, PLAYER_HEIGHT, snap.z);
     this.scene.add(sprite);
 
@@ -124,6 +198,10 @@ export class RemotePlayerRenderer {
       lastSnapshot: snap,
       prevSnapshot: null,
       interpTime: 0,
+      animTimer: 0,
+      animFrame: 0,
+      currentSpriteIdx: -1,
+      lastWeapon: snap.weapon,
     };
   }
 
@@ -139,5 +217,7 @@ export class RemotePlayerRenderer {
 
   destroy(): void {
     this.clear();
+    for (const tex of this.textureCache.values()) tex.dispose();
+    this.textureCache.clear();
   }
 }

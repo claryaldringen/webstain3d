@@ -231,6 +231,7 @@ export class MultiplayerGame {
 
     if (this.remoteEnemies) this.remoteEnemies.destroy();
     this.remoteEnemies = new RemoteEnemyRenderer(this.renderer.scene, this.vswap);
+    this.remotePlayers.setVSwap(this.vswap);
     if (this.remoteItems) this.remoteItems.destroy();
     this.remoteItems = new RemoteItemRenderer(this.renderer.scene, this.vswap);
 
