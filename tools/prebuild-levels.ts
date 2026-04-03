@@ -26,6 +26,16 @@ function buildConfig(seed: number, level: number): LevelConfig {
 
 const ENEMY_TYPES = new Set(['guard', 'dog', 'ss', 'mutant', 'officer', 'boss']);
 
+// Only these subtypes are collectible items (not decorations)
+const COLLECTIBLE_ITEMS = new Set([
+  'food', 'first_aid', 'medkit',
+  'ammo_clip', 'ammo_stack',
+  'cross', 'chalice', 'chest', 'crown',
+  'key_gold', 'key_silver',
+  'extra_life',
+  'machine_gun', 'chaingun',
+]);
+
 mkdirSync('server/data', { recursive: true });
 
 for (let level = 1; level <= TOTAL_LEVELS; level++) {
@@ -48,7 +58,7 @@ for (let level = 1; level <= TOTAL_LEVELS; level++) {
       .filter(e => ENEMY_TYPES.has(e.type))
       .map(e => ({ type: e.type, x: e.x, y: e.y, angle: (e.angle || 0) * Math.PI / 180 })),
     items: data.entities
-      .filter(e => !ENEMY_TYPES.has(e.type) && e.subtype)
+      .filter(e => !ENEMY_TYPES.has(e.type) && e.subtype && COLLECTIBLE_ITEMS.has(e.subtype))
       .map(e => ({ subtype: e.subtype!, x: e.x, y: e.y })),
     playerStart: data.playerStart,
     exitTile: data.exitTile,
