@@ -124,6 +124,8 @@ export class Game {
     const label = this.menuItems[index]?.getAttribute('data-label') || '';
     if (label.includes('New Game')) {
       this.startGame();
+    } else if (label.includes('Multiplayer')) {
+      window.location.search = '?mp';
     } else if (label.includes('Sound')) {
       this.soundEnabled = !this.soundEnabled;
       this.audio.setMasterVolume(this.soundEnabled ? 1.0 : 0.0);
