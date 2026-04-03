@@ -2,6 +2,7 @@ import { NetworkClient } from '../network/NetworkClient.js';
 import { KillFeed } from './KillFeed.js';
 import { Scoreboard } from './Scoreboard.js';
 import { RemotePlayerRenderer } from './RemotePlayerRenderer.js';
+import { RemoteEnemyRenderer } from './RemoteEnemyRenderer.js';
 import { MultiplayerUI } from './MultiplayerUI.js';
 import type {
   StateSnapshot,
@@ -42,6 +43,7 @@ export class MultiplayerGame {
   private remotePlayers!: RemotePlayerRenderer;
   private ui!: MultiplayerUI;
   private weaponOverlay: WeaponOverlay | null = null;
+  private remoteEnemies: RemoteEnemyRenderer | null = null;
   private vswap: VSwapLoader | null = null;
 
   private myId = '';
@@ -222,6 +224,9 @@ export class MultiplayerGame {
     this.weaponOverlay = new WeaponOverlay();
     this.weaponOverlay.initSprites(this.vswap, (name, firing) => drawWeaponSprite(name as WeaponName, firing));
 
+    if (this.remoteEnemies) this.remoteEnemies.destroy();
+    this.remoteEnemies = new RemoteEnemyRenderer(this.renderer.scene, this.vswap);
+
     this.startGameLoop();
   }
 
@@ -284,9 +289,12 @@ export class MultiplayerGame {
     this.renderer.camera.rotation.order = 'YXZ';
     this.renderer.camera.rotation.set(0, this.localAngle, 0);
 
-    // Update remote players
+    // Update remote players and enemies
     if (this.lastSnapshot) {
       this.remotePlayers.update(this.lastSnapshot.players, dt);
+      if (this.remoteEnemies) {
+        this.remoteEnemies.update(this.lastSnapshot.enemies);
+      }
     }
 
     // Scoreboard toggle (Tab)
@@ -351,6 +359,8 @@ export class MultiplayerGame {
     this.killFeed?.destroy();
     this.scoreboard?.destroy();
     this.remotePlayers?.destroy();
+    this.remoteEnemies?.destroy();
+    this.weaponOverlay?.destroy();
     this.ui?.destroy();
     this.renderer?.destroy();
     this.input?.destroy();
