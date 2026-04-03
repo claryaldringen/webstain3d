@@ -42,7 +42,8 @@ for (let level = 1; level <= TOTAL_LEVELS; level++) {
     seed,
     width: data.width,
     height: data.height,
-    walls: data.walls,
+    // Replace door tiles (-1) with open floor (0) — MP has no door system
+    walls: data.walls.map(row => row.map(v => v === -1 ? 0 : v)),
     enemies: data.entities
       .filter(e => ENEMY_TYPES.has(e.type))
       .map(e => ({ type: e.type, x: e.x, y: e.y, angle: (e.angle || 0) * Math.PI / 180 })),
