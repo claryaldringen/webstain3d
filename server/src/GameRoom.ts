@@ -91,11 +91,11 @@ export class GameRoom {
   addPlayer(session: PlayerSession): void {
     this.players.set(session.id, session);
 
-    // Get or create level instance
+    // Spawn at playerStart from level data (safe area, away from enemies)
     const levelInst = this.getOrCreateLevel(1);
-    const spawn = levelInst.getRandomSpawn(this.rng);
-    session.x = spawn.x;
-    session.z = spawn.z;
+    const levelData = loadLevelData(1);
+    session.x = (levelData.playerStart.x + 0.5) * TILE_SIZE;
+    session.z = (levelData.playerStart.y + 0.5) * TILE_SIZE;
     session.angle = 0;
     session.level = 1;
 

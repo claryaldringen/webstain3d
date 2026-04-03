@@ -133,8 +133,20 @@ export class LevelInstance {
 
   getRandomSpawn(rng: SeededRandom): { x: number; z: number } {
     if (this.spawnPoints.length === 0) return { x: 1.5, z: 1.5 };
-    const idx = rng.int(0, this.spawnPoints.length - 1);
-    return this.spawnPoints[idx]!;
+
+    // Prefer spawn points far from alive enemies (min 5 tiles)
+    const safePoints = this.spawnPoints.filter(sp => {
+      for (const e of this.enemies) {
+        if (!e.alive) continue;
+        const dx = sp.x - e.x;
+        const dz = sp.z - e.z;
+        if (dx * dx + dz * dz < 25) return false;
+      }
+      return true;
+    });
+
+    const pool = safePoints.length > 0 ? safePoints : this.spawnPoints;
+    return pool[rng.int(0, pool.length - 1)]!;
   }
 
   canSee(x1: number, z1: number, x2: number, z2: number): boolean {
