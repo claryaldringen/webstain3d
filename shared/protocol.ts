@@ -17,6 +17,7 @@ export interface InputMessage {
   x?: number;        // client position for shoot verification
   z?: number;
   angle?: number;
+  weapon?: number;
 }
 
 export type ClientMessage = JoinMessage | InputMessage;

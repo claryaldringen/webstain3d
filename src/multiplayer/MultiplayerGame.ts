@@ -251,8 +251,22 @@ export class MultiplayerGame {
 
     // Read input
     const movement = this.input.getMovement();
-    const shooting = this.input.isFiring();
     const interacting = this.input.isInteracting();
+
+    // Weapon switch (1-4 keys)
+    const weaponSwitch = this.input.weaponSwitch();
+    if (weaponSwitch >= 0 && weaponSwitch <= this.weapon) {
+      this.weapon = weaponSwitch;
+    }
+
+    // Auto-switch to knife when out of ammo
+    if (this.ammo <= 0 && this.weapon > 0) {
+      this.weapon = WeaponId.Knife;
+    }
+
+    // Can only shoot if: knife (no ammo needed) or have ammo
+    const canShoot = this.weapon === WeaponId.Knife || this.ammo > 0;
+    const shooting = this.input.isFiring() && canShoot;
 
     // Local prediction: move locally (same math as Player.ts)
     if (this.alive) {
@@ -296,6 +310,7 @@ export class MultiplayerGame {
         x: this.localX,
         z: this.localZ,
         angle: this.localAngle,
+        weapon: this.weapon,
       });
     }
 

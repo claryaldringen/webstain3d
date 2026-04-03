@@ -209,6 +209,9 @@ export class GameRoom {
       }
       player.lastSeq = lastInput.seq;
       player.shooting = lastInput.shoot;
+      if (lastInput.weapon != null) {
+        player.weapon = lastInput.weapon;
+      }
 
       // Handle shooting using client position/angle
       if (anyShoot && player.alive) {
