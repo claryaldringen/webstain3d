@@ -13,8 +13,8 @@ import type {
   InputMessage,
   LevelConfigData,
 } from '../../shared/protocol.js';
-import { generateLevel } from '../../src/map/LevelGenerator.js';
-import type { LevelConfig } from '../../src/map/types.js';
+import { generateLevel } from './levelgen.js';
+import type { LevelConfig } from './levelgen.js';
 
 const TICK_RATE = 20;
 const TICK_DT = 1 / TICK_RATE;
