@@ -29,7 +29,7 @@ interface RemotePlayer {
   lastWeapon: number;
 }
 
-const INTERP_DURATION = 0.05; // 50ms = 20Hz tick
+const INTERP_DURATION = 0.1; // 100ms — smoother than tick rate to avoid jitter
 
 export class RemotePlayerRenderer {
   private scene: THREE.Scene;
@@ -110,7 +110,7 @@ export class RemotePlayerRenderer {
 
       // Label follows sprite
       rp.label.position.copy(rp.sprite.position);
-      rp.label.position.y = WALL_HEIGHT + 0.1;
+      rp.label.position.y = PLAYER_HEIGHT + 0.6;
     }
   }
 
@@ -189,7 +189,7 @@ export class RemotePlayerRenderer {
     const labelMat = new THREE.SpriteMaterial({ map: labelTex, transparent: true });
     const label = new THREE.Sprite(labelMat);
     label.scale.set(1, 0.25, 1);
-    label.position.set(snap.x, WALL_HEIGHT + 0.1, snap.z);
+    label.position.set(snap.x, PLAYER_HEIGHT + 0.6, snap.z);
     this.scene.add(label);
 
     return {
