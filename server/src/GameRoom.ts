@@ -13,136 +13,70 @@ import type {
   InputMessage,
   LevelConfigData,
 } from '../../shared/protocol.js';
+import { generateLevel } from '../../src/map/LevelGenerator.ts';
+import type { LevelConfig } from '../../src/map/types.ts';
 
 const TICK_RATE = 20;
 const TICK_DT = 1 / TICK_RATE;
 const MAX_PLAYERS = 8;
 const TOTAL_LEVELS = 10;
 
-// Minimal level generator for server side
-// Generates a simple rooms layout with enemies
+/** Build a LevelConfig matching singleplayer's progressive difficulty. */
+function buildLevelConfig(seed: number, level: number): LevelConfig {
+  const enemyTypes: Record<string, number> = { guard: 3, dog: 1 };
+  if (level >= 2) enemyTypes.ss = 1;
+  if (level >= 3) enemyTypes.mutant = 1;
+  if (level >= 5) enemyTypes.officer = 1;
+  if (level >= 7) { enemyTypes.officer = 2; enemyTypes.ss = 2; }
+
+  return {
+    style: 'rooms_corridors',
+    seed,
+    enemyCount: [5 + level * 2, 10 + level * 3],
+    enemyTypes,
+    itemDensity: 0.5,
+    doorCount: [2, 4 + level],
+    wallVariety: Math.min(7, 2 + level),
+  };
+}
+
+const ENEMY_TYPES = new Set(['guard', 'dog', 'ss', 'mutant', 'officer', 'boss']);
+
+/** Use the shared LevelGenerator (same as singleplayer) */
 function generateServerLevel(seed: number, level: number): {
   walls: number[][];
   width: number;
   height: number;
   enemies: { type: string; x: number; y: number; angle: number }[];
+  items: { subtype: string; x: number; y: number }[];
   spawnPoints: { x: number; y: number }[];
   exitTile: { x: number; y: number } | null;
 } {
-  const rng = new SeededRandom(seed);
-  const width = 32;
-  const height = 32;
-
-  // Build walls grid
-  const walls: number[][] = [];
-  for (let y = 0; y < height; y++) {
-    const row: number[] = [];
-    for (let x = 0; x < width; x++) {
-      row.push(y === 0 || y === height - 1 || x === 0 || x === width - 1 ? 1 : 0);
-    }
-    walls.push(row);
-  }
-
-  // Create rooms with walls between them
-  const roomSize = 8;
-  const numRoomsX = Math.floor((width - 2) / roomSize);
-  const numRoomsZ = Math.floor((height - 2) / roomSize);
-
-  // Add internal walls with doorways
-  for (let ry = 0; ry < numRoomsZ; ry++) {
-    for (let rx = 0; rx < numRoomsX; rx++) {
-      const bx = 1 + rx * roomSize;
-      const by = 1 + ry * roomSize;
-      // East wall
-      if (rx < numRoomsX - 1) {
-        const wallX = bx + roomSize;
-        if (wallX < width - 1) {
-          for (let y = by; y < by + roomSize && y < height - 1; y++) {
-            walls[y]![wallX] = 1;
-          }
-          // Doorway
-          const doorY = by + rng.int(1, roomSize - 2);
-          if (doorY < height - 1) walls[doorY]![wallX] = 0;
-          if (doorY + 1 < height - 1) walls[doorY + 1]![wallX] = 0;
-        }
-      }
-      // South wall
-      if (ry < numRoomsZ - 1) {
-        const wallY = by + roomSize;
-        if (wallY < height - 1) {
-          for (let x = bx; x < bx + roomSize && x < width - 1; x++) {
-            walls[wallY]![x] = 1;
-          }
-          // Doorway
-          const doorX = bx + rng.int(1, roomSize - 2);
-          if (doorX < width - 1) walls[wallY]![doorX] = 0;
-          if (doorX + 1 < width - 1) walls[wallY]![doorX + 1] = 0;
-        }
-      }
-    }
-  }
-
-  // Scatter some pillars for cover
-  const pillarCount = rng.int(5, 15);
-  for (let i = 0; i < pillarCount; i++) {
-    const px = rng.int(2, width - 3);
-    const py = rng.int(2, height - 3);
-    if (walls[py]![px] === 0) {
-      walls[py]![px] = 1;
-    }
-  }
-
-  // Collect floor tiles and shuffle them
-  const floorTiles: { x: number; y: number }[] = [];
-  for (let y = 1; y < height - 1; y++) {
-    for (let x = 1; x < width - 1; x++) {
-      if (walls[y]![x] === 0) floorTiles.push({ x, y });
-    }
-  }
-  // Fisher-Yates shuffle
-  for (let i = floorTiles.length - 1; i > 0; i--) {
-    const j = rng.int(0, i);
-    [floorTiles[i], floorTiles[j]] = [floorTiles[j]!, floorTiles[i]!];
-  }
-
-  // Spawn points spread across the map (take first N from shuffled)
-  const spawnCount = Math.min(8, floorTiles.length);
-  const spawnPoints = floorTiles.slice(0, spawnCount);
-
-  // Place enemies on remaining tiles, away from spawn points (min 5 tiles)
-  const spawnSet = new Set(spawnPoints.map(s => `${s.x},${s.y}`));
-  const enemyTiles = floorTiles.slice(spawnCount).filter(t => {
-    for (const sp of spawnPoints) {
-      const dx = t.x - sp.x;
-      const dy = t.y - sp.y;
-      if (dx * dx + dy * dy < 25) return false; // min 5 tiles distance
-    }
-    return !spawnSet.has(`${t.x},${t.y}`);
-  });
-
-  const enemyTypes: string[] = ['guard', 'dog'];
-  if (level >= 2) enemyTypes.push('ss');
-  if (level >= 3) enemyTypes.push('mutant');
-  if (level >= 5) enemyTypes.push('officer');
-
-  const enemyCount = 5 + level * 2;
-  const enemies: { type: string; x: number; y: number; angle: number }[] = [];
-  for (let i = 0; i < enemyCount && i < enemyTiles.length; i++) {
-    const tile = enemyTiles[i]!;
-    const type = enemyTypes[rng.int(0, enemyTypes.length - 1)]!;
-    enemies.push({ type, x: tile.x, y: tile.y, angle: rng.next() * Math.PI * 2 });
-  }
+  const config = buildLevelConfig(seed, level);
+  const data = generateLevel(config);
 
   // Boss on level 10
-  if (level === TOTAL_LEVELS) {
-    const centerTile = floorTiles[Math.floor(floorTiles.length / 2)]!;
-    enemies.push({ type: 'boss', x: centerTile.x, y: centerTile.y, angle: 0 });
+  if (level === TOTAL_LEVELS && data.exitTile) {
+    data.entities.push({ type: 'boss', x: data.exitTile.x, y: data.exitTile.y - 1, angle: 180 });
   }
 
-  // Exit tile (far corner)
-  const exitTile = level < TOTAL_LEVELS ? { x: width - 2, y: height - 2 } : null;
+  const enemies = data.entities
+    .filter(e => ENEMY_TYPES.has(e.type))
+    .map(e => ({ type: e.type, x: e.x, y: e.y, angle: (e.angle || 0) * Math.PI / 180 }));
 
-  return { walls, width, height, enemies, spawnPoints, exitTile };
+  const items = data.entities
+    .filter(e => !ENEMY_TYPES.has(e.type) && e.subtype)
+    .map(e => ({ subtype: e.subtype!, x: e.x, y: e.y }));
+
+  return {
+    walls: data.walls,
+    width: data.width,
+    height: data.height,
+    enemies,
+    items,
+    spawnPoints: [data.playerStart],
+    exitTile: data.exitTile,
+  };
 }
 
 export class GameRoom {
@@ -261,21 +195,9 @@ export class GameRoom {
       inst.addEnemy(e.type, e.x, e.y, e.angle);
     }
 
-    // Scatter items on the map
-    const rng = new SeededRandom(config.seed + 999);
-    const floorTiles: { x: number; y: number }[] = [];
-    for (let y = 1; y < data.height - 1; y++) {
-      for (let x = 1; x < data.width - 1; x++) {
-        if (data.walls[y]![x] === 0) floorTiles.push({ x, y });
-      }
-    }
-    const itemTypes = ['food', 'first_aid', 'ammo_clip', 'ammo_clip', 'cross', 'chalice'];
-    const itemCount = 8 + level * 2;
-    for (let i = 0; i < itemCount && floorTiles.length > 0; i++) {
-      const idx = rng.int(0, floorTiles.length - 1);
-      const tile = floorTiles.splice(idx, 1)[0]!;
-      const subtype = itemTypes[rng.int(0, itemTypes.length - 1)]!;
-      inst.spawnItem(subtype, (tile.x + 0.5) * TILE_SIZE, (tile.y + 0.5) * TILE_SIZE);
+    // Add items from level generator
+    for (const item of data.items) {
+      inst.spawnItem(item.subtype, (item.x + 0.5) * TILE_SIZE, (item.y + 0.5) * TILE_SIZE);
     }
 
     this.levels.set(level, inst);

@@ -12,5 +12,5 @@
       "@shared/*": ["../shared/*"]
     }
   },
-  "include": ["src/**/*", "../shared/**/*"]
+  "include": ["src/**/*", "../shared/**/*", "../src/map/**/*", "../src/core/constants.ts", "../src/sprites/SpriteConfig.ts", "../src/types/index.ts"]
 }
