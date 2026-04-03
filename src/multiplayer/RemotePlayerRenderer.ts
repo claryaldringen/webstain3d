@@ -3,7 +3,7 @@ import { PLAYER_HEIGHT, WALL_HEIGHT } from '../core/constants.js';
 import type { PlayerSnapshot } from '../../shared/protocol.js';
 
 interface RemotePlayer {
-  mesh: THREE.Mesh;
+  sprite: THREE.Sprite;
   label: THREE.Sprite;
   lastSnapshot: PlayerSnapshot;
   prevSnapshot: PlayerSnapshot | null;
@@ -43,17 +43,16 @@ export class RemotePlayerRenderer {
       rp.lastSnapshot = snap;
       rp.interpTime = 0;
 
-      rp.mesh.visible = snap.alive;
+      rp.sprite.visible = snap.alive;
       rp.label.visible = snap.alive;
     }
 
     // Remove players no longer in snapshot
     for (const [id, rp] of this.players) {
       if (!activeIds.has(id)) {
-        this.scene.remove(rp.mesh);
+        this.scene.remove(rp.sprite);
         this.scene.remove(rp.label);
-        rp.mesh.geometry.dispose();
-        (rp.mesh.material as THREE.Material).dispose();
+        rp.sprite.material.dispose();
         rp.label.material.dispose();
         this.players.delete(id);
       }
@@ -65,23 +64,22 @@ export class RemotePlayerRenderer {
       const t = Math.min(rp.interpTime / INTERP_DURATION, 1);
 
       if (rp.prevSnapshot) {
-        rp.mesh.position.x = rp.prevSnapshot.x + (rp.lastSnapshot.x - rp.prevSnapshot.x) * t;
-        rp.mesh.position.z = rp.prevSnapshot.z + (rp.lastSnapshot.z - rp.prevSnapshot.z) * t;
+        rp.sprite.position.x = rp.prevSnapshot.x + (rp.lastSnapshot.x - rp.prevSnapshot.x) * t;
+        rp.sprite.position.z = rp.prevSnapshot.z + (rp.lastSnapshot.z - rp.prevSnapshot.z) * t;
       } else {
-        rp.mesh.position.x = rp.lastSnapshot.x;
-        rp.mesh.position.z = rp.lastSnapshot.z;
+        rp.sprite.position.x = rp.lastSnapshot.x;
+        rp.sprite.position.z = rp.lastSnapshot.z;
       }
-      rp.mesh.position.y = PLAYER_HEIGHT;
+      rp.sprite.position.y = PLAYER_HEIGHT;
 
-      // Label follows mesh
-      rp.label.position.copy(rp.mesh.position);
+      // Label follows sprite
+      rp.label.position.copy(rp.sprite.position);
       rp.label.position.y = WALL_HEIGHT + 0.1;
     }
   }
 
   private createPlayer(snap: PlayerSnapshot): RemotePlayer {
-    // Simple colored plane sprite for other players
-    const geo = new THREE.PlaneGeometry(0.8, 1.0);
+    // Billboard sprite for other players (always faces camera)
     const canvas = document.createElement('canvas');
     canvas.width = 32;
     canvas.height = 40;
@@ -97,14 +95,11 @@ export class RemotePlayerRenderer {
     const texture = new THREE.CanvasTexture(canvas);
     texture.magFilter = THREE.NearestFilter;
     texture.minFilter = THREE.NearestFilter;
-    const mat = new THREE.MeshBasicMaterial({
-      map: texture,
-      transparent: true,
-      side: THREE.DoubleSide,
-    });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(snap.x, PLAYER_HEIGHT, snap.z);
-    this.scene.add(mesh);
+    const mat = new THREE.SpriteMaterial({ map: texture, transparent: true });
+    const sprite = new THREE.Sprite(mat);
+    sprite.scale.set(0.8, 1.0, 1);
+    sprite.position.set(snap.x, PLAYER_HEIGHT, snap.z);
+    this.scene.add(sprite);
 
     // Name label
     const labelCanvas = document.createElement('canvas');
@@ -124,7 +119,7 @@ export class RemotePlayerRenderer {
     this.scene.add(label);
 
     return {
-      mesh,
+      sprite,
       label,
       lastSnapshot: snap,
       prevSnapshot: null,
@@ -134,10 +129,9 @@ export class RemotePlayerRenderer {
 
   clear(): void {
     for (const rp of this.players.values()) {
-      this.scene.remove(rp.mesh);
+      this.scene.remove(rp.sprite);
       this.scene.remove(rp.label);
-      rp.mesh.geometry.dispose();
-      (rp.mesh.material as THREE.Material).dispose();
+      rp.sprite.material.dispose();
       rp.label.material.dispose();
     }
     this.players.clear();
