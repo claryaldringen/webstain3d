@@ -151,13 +151,19 @@ export class GameRoom {
     this.seed = Date.now();
     this.rng = new SeededRandom(this.seed);
 
-    // Pre-generate level configs (seeds)
+    // Pre-generate all levels and store layout data
     for (let i = 1; i <= TOTAL_LEVELS; i++) {
+      const levelSeed = this.seed + i * 1000;
+      const data = generateServerLevel(levelSeed, i);
       this.levelConfigs.push({
         level: i,
-        seed: this.seed + i * 1000,
-        width: 32,
-        height: 32,
+        seed: levelSeed,
+        width: data.width,
+        height: data.height,
+        walls: data.walls,
+        enemies: data.enemies,
+        playerStart: data.spawnPoints[0] || { x: 2, y: 2 },
+        exitTile: data.exitTile,
       });
     }
   }

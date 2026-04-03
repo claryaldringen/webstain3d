@@ -8,3 +8,4 @@ dist/
 *.jpg
 screenshots/
 reference/
+.vercel

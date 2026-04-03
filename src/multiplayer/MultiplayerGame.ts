@@ -6,6 +6,7 @@ import { MultiplayerUI } from './MultiplayerUI.js';
 import type {
   StateSnapshot,
   WelcomeMessage,
+  LevelConfigData,
 } from '../../shared/protocol.js';
 
 // Re-use existing game infrastructure
@@ -14,7 +15,6 @@ import { GameMap } from '../map/GameMap.js';
 import { SpriteManager } from '../sprites/SpriteManager.js';
 import { Input } from '../systems/Input.js';
 import { HUD } from '../rendering/HUD.js';
-import { generateLevel } from '../map/LevelGenerator.js';
 import {
   TILE_SIZE,
   PLAYER_MOVE_SPEED,
@@ -22,7 +22,6 @@ import {
   PLAYER_ROTATE_SPEED,
   PLAYER_HEIGHT,
 } from '../core/constants.js';
-import type { LevelConfig } from '../map/types.js';
 
 export class MultiplayerGame {
   private canvas: HTMLCanvasElement;
@@ -52,6 +51,8 @@ export class MultiplayerGame {
   private lastTime = 0;
   private serverUrl: string;
 
+  private levelConfigsFromServer: LevelConfigData[] = [];
+
   // Local prediction state
   private localX = 0;
   private localZ = 0;
@@ -63,6 +64,11 @@ export class MultiplayerGame {
   }
 
   async start(): Promise<void> {
+    // Hide all singleplayer screen overlays
+    document.querySelectorAll('.screen-overlay').forEach(el => {
+      (el as HTMLElement).style.display = 'none';
+    });
+
     this.renderer = new Renderer(this.canvas);
     this.input = new Input();
     this.hud = new HUD();
@@ -89,8 +95,9 @@ export class MultiplayerGame {
       onWelcome: (msg: WelcomeMessage) => {
         this.myId = msg.id;
         this.remotePlayers.setMyId(msg.id);
+        this.levelConfigsFromServer = msg.levelConfigs;
         this.ui.hide();
-        this.initLevel(1, msg.levelConfigs[0]!.seed);
+        this.initLevel(1);
       },
 
       onSnapshot: (msg: StateSnapshot) => {
@@ -158,37 +165,41 @@ export class MultiplayerGame {
     this.network.connect();
   }
 
-  private async initLevel(level: number, seed: number): Promise<void> {
+  private async initLevel(level: number): Promise<void> {
     this.currentLevel = level;
 
-    // Generate level locally for rendering (same seed as server)
+    const serverLevel = this.levelConfigsFromServer.find(c => c.level === level);
+    if (!serverLevel) {
+      console.error('No level config from server for level', level);
+      return;
+    }
+
+    // Use server's walls data directly for rendering
     this.renderer.clearLevel();
     this.map = new GameMap(this.renderer);
 
-    const lvl = level;
-    const enemyTypes: Record<string, number> = { guard: 3, dog: 1 };
-    if (lvl >= 2) enemyTypes.ss = 1;
-    if (lvl >= 3) enemyTypes.mutant = 1;
-    if (lvl >= 5) enemyTypes.officer = 1;
-    if (lvl >= 7) { enemyTypes.officer = 2; enemyTypes.ss = 2; }
-
-    const config: LevelConfig = {
-      style: 'rooms_corridors',
-      seed,
-      enemyCount: [5 + lvl * 2, 10 + lvl * 3],
-      enemyTypes,
-      itemDensity: 0.5,
-      doorCount: [2, 4 + lvl],
-      wallVariety: Math.min(7, 2 + lvl),
+    const levelData = {
+      width: serverLevel.width,
+      height: serverLevel.height,
+      walls: serverLevel.walls,
+      doors: [] as any[],
+      pushwalls: [] as any[],
+      entities: serverLevel.enemies.map(e => ({
+        type: e.type as any,
+        x: e.x,
+        y: e.y,
+        angle: e.angle,
+      })),
+      playerStart: { x: serverLevel.playerStart.x, y: serverLevel.playerStart.y, angle: 0 },
+      exitTile: serverLevel.exitTile,
     };
 
-    const levelData = generateLevel(config);
     await this.map.loadFromData(levelData);
 
     this.spriteManager = new SpriteManager(this.renderer, null);
 
-    this.localX = (levelData.playerStart.x + 0.5) * TILE_SIZE;
-    this.localZ = (levelData.playerStart.y + 0.5) * TILE_SIZE;
+    this.localX = (serverLevel.playerStart.x + 0.5) * TILE_SIZE;
+    this.localZ = (serverLevel.playerStart.y + 0.5) * TILE_SIZE;
     this.localAngle = 0;
 
     this.startGameLoop();

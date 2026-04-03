@@ -66,6 +66,10 @@ export interface LevelConfigData {
   seed: number;
   width: number;
   height: number;
+  walls: number[][];
+  enemies: { type: string; x: number; y: number; angle: number }[];
+  playerStart: { x: number; y: number };
+  exitTile: { x: number; y: number } | null;
 }
 
 export interface PlayerKilledEvent {
