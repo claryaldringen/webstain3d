@@ -212,7 +212,7 @@ export class RemotePlayerRenderer {
     lctx.fillText(snap.name, 128, 32);
 
     const labelTex = new THREE.CanvasTexture(labelCanvas);
-    const labelMat = new THREE.SpriteMaterial({ map: labelTex, transparent: true, depthTest: false });
+    const labelMat = new THREE.SpriteMaterial({ map: labelTex, transparent: true });
     const label = new THREE.Sprite(labelMat);
     label.scale.set(1.5, 0.4, 1);
     label.position.set(snap.x, PLAYER_HEIGHT + 0.7, snap.z);

@@ -11,6 +11,8 @@ let phaseTimer = 0;
 let forward = 0, strafe = 0, rotate = 0, sprint = false, shoot = false;
 let walls: number[][] = [];
 let mapWidth = 0, mapHeight = 0;
+let myId = '';
+let targetX = 0, targetZ = 0, hasTarget = false;
 
 const SPEED = 3.5;
 const ROTATE_SPEED = 2.6;
@@ -51,6 +53,7 @@ ws.on('open', () => {
 ws.on('message', (data: Buffer) => {
   const msg = JSON.parse(data.toString());
   if (msg.type === 'welcome') {
+    myId = msg.id;
     console.log(`[${NAME}] Joined room ${msg.roomId} as ${msg.id}`);
     const lvl = msg.levelConfigs?.[0];
     if (lvl) {
@@ -60,6 +63,25 @@ ws.on('message', (data: Buffer) => {
       x = (lvl.playerStart.x + 0.5);
       z = (lvl.playerStart.y + 0.5);
       console.log(`[${NAME}] Map ${mapWidth}x${mapHeight}, start at ${x.toFixed(1)},${z.toFixed(1)}`);
+    }
+  }
+  if (msg.type === 'snapshot') {
+    // Find nearest other player to aim at
+    const others = (msg.players || []).filter((p: any) => p.id !== myId && p.alive);
+    if (others.length > 0) {
+      let closest = others[0];
+      let closestDist = Infinity;
+      for (const p of others) {
+        const dx = p.x - x;
+        const dz = p.z - z;
+        const dist = dx * dx + dz * dz;
+        if (dist < closestDist) { closestDist = dist; closest = p; }
+      }
+      targetX = closest.x;
+      targetZ = closest.z;
+      hasTarget = true;
+    } else {
+      hasTarget = false;
     }
   }
   if (msg.type === 'player_joined') console.log(`[${NAME}] ${msg.name} joined`);
@@ -112,6 +134,32 @@ const interval = setInterval(() => {
     stuckCounter = 0;
   }
   lastX = x; lastZ = z;
+
+  // Aim at target player when visible
+  if (hasTarget) {
+    const dx = targetX - x;
+    const dz = targetZ - z;
+    const targetAngle = Math.atan2(-dx, -dz); // matches -sin/-cos model
+    const dist = Math.sqrt(dx * dx + dz * dz);
+
+    // Smoothly rotate toward target
+    let diff = targetAngle - angle;
+    while (diff > Math.PI) diff -= 2 * Math.PI;
+    while (diff < -Math.PI) diff += 2 * Math.PI;
+
+    if (Math.abs(diff) < 0.2 && dist < 15) {
+      // Aimed — shoot and approach
+      shoot = true;
+      forward = dist > 2 ? 1 : 0;
+      rotate = diff * 3; // fine aim
+    } else {
+      // Turn toward target
+      rotate = diff > 0 ? 1 : -1;
+      forward = 0.5;
+      shoot = false;
+    }
+    phaseTimer = 0.1; // fast re-eval
+  }
 
   // Movement with collision
   angle += rotate * ROTATE_SPEED * DT;
