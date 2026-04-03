@@ -14,6 +14,9 @@ export interface InputMessage {
   sprint: boolean;
   shoot: boolean;
   interact: boolean;
+  x?: number;        // client position for shoot verification
+  z?: number;
+  angle?: number;
 }
 
 export type ClientMessage = JoinMessage | InputMessage;

@@ -277,20 +277,28 @@ export class GameRoom {
       const levelInst = this.levels.get(player.level);
       if (!levelInst) continue;
 
-      // Take the last input (current key state) and apply once with TICK_DT
       const lastInput = inputs[inputs.length - 1]!;
-      // Track seq from all inputs
-      for (const input of inputs) {
-        player.lastSeq = input.seq;
-      }
 
       // Check if any input in this batch had shoot/interact
       const anyShoot = inputs.some(i => i.shoot);
       const anyInteract = inputs.some(i => i.interact);
 
-      player.applyInput(lastInput, levelInst, TICK_DT);
+      // Client-authoritative movement: accept client position
+      if (lastInput.x != null && lastInput.z != null) {
+        const tx = Math.floor(lastInput.x / TILE_SIZE);
+        const tz = Math.floor(lastInput.z / TILE_SIZE);
+        if (!levelInst.isSolid(tx, tz)) {
+          player.x = lastInput.x;
+          player.z = lastInput.z;
+        }
+      }
+      if (lastInput.angle != null) {
+        player.angle = lastInput.angle;
+      }
+      player.lastSeq = lastInput.seq;
+      player.shooting = lastInput.shoot;
 
-      // Handle shooting
+      // Handle shooting using client position/angle
       if (anyShoot && player.alive) {
         this.handleShoot(player, levelInst);
       }

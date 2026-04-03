@@ -286,6 +286,9 @@ export class MultiplayerGame {
         sprint: movement.sprint,
         shoot: shooting,
         interact: interacting,
+        x: this.localX,
+        z: this.localZ,
+        angle: this.localAngle,
       });
     }
 
