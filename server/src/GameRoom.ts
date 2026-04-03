@@ -270,42 +270,51 @@ export class GameRoom {
     if (this.gameOver) return;
     this.tick++;
 
-    // Process pending inputs
+    // Process pending inputs — use only the latest input per player per tick
     for (const [playerId, inputs] of this.pendingInputs) {
       const player = this.players.get(playerId);
       if (!player) continue;
       const levelInst = this.levels.get(player.level);
       if (!levelInst) continue;
 
+      // Take the last input (current key state) and apply once with TICK_DT
+      const lastInput = inputs[inputs.length - 1]!;
+      // Track seq from all inputs
       for (const input of inputs) {
-        player.applyInput(input, levelInst, TICK_DT);
+        player.lastSeq = input.seq;
+      }
 
-        // Handle shooting
-        if (input.shoot && player.alive) {
-          this.handleShoot(player, levelInst);
-        }
+      // Check if any input in this batch had shoot/interact
+      const anyShoot = inputs.some(i => i.shoot);
+      const anyInteract = inputs.some(i => i.interact);
 
-        // Handle interact (exit tile / level advance)
-        if (input.interact && player.alive && player.level < TOTAL_LEVELS) {
-          const levelData = generateServerLevel(
-            this.levelConfigs[player.level - 1]!.seed,
-            player.level,
-          );
-          if (levelData.exitTile) {
-            const px = Math.floor(player.x / TILE_SIZE);
-            const pz = Math.floor(player.z / TILE_SIZE);
-            if (px === levelData.exitTile.x && pz === levelData.exitTile.y) {
-              player.level++;
-              const newLevel = this.getOrCreateLevel(player.level);
-              const spawn = newLevel.getRandomSpawn(this.rng);
-              player.x = spawn.x;
-              player.z = spawn.z;
-              this.broadcast({
-                type: 'level_change',
-                playerId: player.id,
-                level: player.level,
-              });
-            }
+      player.applyInput(lastInput, levelInst, TICK_DT);
+
+      // Handle shooting
+      if (anyShoot && player.alive) {
+        this.handleShoot(player, levelInst);
+      }
+
+      // Handle interact (exit tile / level advance)
+      if (anyInteract && player.alive && player.level < TOTAL_LEVELS) {
+        const levelData = generateServerLevel(
+          this.levelConfigs[player.level - 1]!.seed,
+          player.level,
+        );
+        if (levelData.exitTile) {
+          const px = Math.floor(player.x / TILE_SIZE);
+          const pz = Math.floor(player.z / TILE_SIZE);
+          if (px === levelData.exitTile.x && pz === levelData.exitTile.y) {
+            player.level++;
+            const newLevel = this.getOrCreateLevel(player.level);
+            const spawn = newLevel.getRandomSpawn(this.rng);
+            player.x = spawn.x;
+            player.z = spawn.z;
+            this.broadcast({
+              type: 'level_change',
+              playerId: player.id,
+              level: player.level,
+            });
           }
         }
       }

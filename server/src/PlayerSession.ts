@@ -40,7 +40,6 @@ export class PlayerSession {
   }
 
   applyInput(input: InputMessage, levelInstance: LevelInstance, dt: number): void {
-    this.lastSeq = input.seq;
     this.lastInput = input;
     this.shooting = input.shoot;
 
