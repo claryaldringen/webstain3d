@@ -58,6 +58,7 @@ export class MultiplayerGame {
   private running = false;
   private animFrameId = 0;
   private lastTime = 0;
+  private inputAccum = 0;
   private serverUrl: string;
 
   private levelConfigsFromServer: LevelConfigData[] = [];
@@ -274,15 +275,19 @@ export class MultiplayerGame {
       }
     }
 
-    // Send input to server
-    this.network.sendInput({
-      forward: movement.forward,
-      strafe: movement.strafe,
-      rotate: movement.rotate,
-      sprint: movement.sprint,
-      shoot: shooting,
-      interact: interacting,
-    });
+    // Send input to server at ~20Hz (match server tick rate)
+    this.inputAccum += dt;
+    if (this.inputAccum >= 1 / 20) {
+      this.inputAccum = 0;
+      this.network.sendInput({
+        forward: movement.forward,
+        strafe: movement.strafe,
+        rotate: movement.rotate,
+        sprint: movement.sprint,
+        shoot: shooting,
+        interact: interacting,
+      });
+    }
 
     // Update camera (same as singleplayer)
     this.renderer.camera.position.set(this.localX, PLAYER_HEIGHT, this.localZ);

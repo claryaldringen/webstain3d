@@ -391,8 +391,9 @@ export class GameRoom {
     const [minDmg, maxDmg] = WEAPON_DAMAGE[player.weapon] ?? [15, 25];
     const damage = Math.round(minDmg + Math.random() * (maxDmg - minDmg));
 
-    const cos = Math.cos(player.angle);
-    const sin = -Math.sin(player.angle);
+    // Forward direction matches Player.ts: dirX = -sin(angle), dirZ = -cos(angle)
+    const cos = -Math.sin(player.angle);
+    const sin = -Math.cos(player.angle);
 
     // Raycast to find target
     let closestDist = range;
