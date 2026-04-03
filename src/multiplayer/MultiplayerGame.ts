@@ -25,9 +25,11 @@ import {
   PLAYER_MOVE_SPEED,
   PLAYER_SPRINT_MULTIPLIER,
   PLAYER_ROTATE_SPEED,
+  PLAYER_RADIUS,
   PLAYER_HEIGHT,
   WeaponId,
 } from '../core/constants.js';
+import { checkCollision } from '../systems/CollisionSystem.js';
 
 export class MultiplayerGame {
   private canvas: HTMLCanvasElement;
@@ -261,15 +263,16 @@ export class MultiplayerGame {
       const dx = (dirX * movement.forward + strafeX * movement.strafe) * speed;
       const dz = (dirZ * movement.forward + strafeZ * movement.strafe) * speed;
 
+      const isSolid = (tx: number, ty: number) => this.map.isSolid(tx, ty);
       if (dx !== 0) {
         const tryX = this.localX + dx;
-        if (!this.map.isSolid(Math.floor(tryX / TILE_SIZE), Math.floor(this.localZ / TILE_SIZE))) {
+        if (!checkCollision(tryX, this.localZ, PLAYER_RADIUS, isSolid, TILE_SIZE)) {
           this.localX = tryX;
         }
       }
       if (dz !== 0) {
         const tryZ = this.localZ + dz;
-        if (!this.map.isSolid(Math.floor(this.localX / TILE_SIZE), Math.floor(tryZ / TILE_SIZE))) {
+        if (!checkCollision(this.localX, tryZ, PLAYER_RADIUS, isSolid, TILE_SIZE)) {
           this.localZ = tryZ;
         }
       }
