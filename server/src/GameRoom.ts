@@ -250,6 +250,23 @@ export class GameRoom {
       inst.addEnemy(e.type, e.x, e.y, e.angle);
     }
 
+    // Scatter items on the map
+    const rng = new SeededRandom(config.seed + 999);
+    const floorTiles: { x: number; y: number }[] = [];
+    for (let y = 1; y < data.height - 1; y++) {
+      for (let x = 1; x < data.width - 1; x++) {
+        if (data.walls[y]![x] === 0) floorTiles.push({ x, y });
+      }
+    }
+    const itemTypes = ['food', 'first_aid', 'ammo_clip', 'ammo_clip', 'cross', 'chalice'];
+    const itemCount = 8 + level * 2;
+    for (let i = 0; i < itemCount && floorTiles.length > 0; i++) {
+      const idx = rng.int(0, floorTiles.length - 1);
+      const tile = floorTiles.splice(idx, 1)[0]!;
+      const subtype = itemTypes[rng.int(0, itemTypes.length - 1)]!;
+      inst.spawnItem(subtype, (tile.x + 0.5) * TILE_SIZE, (tile.y + 0.5) * TILE_SIZE);
+    }
+
     this.levels.set(level, inst);
     return inst;
   }
@@ -329,6 +346,31 @@ export class GameRoom {
     }
     this.pendingInputs.clear();
 
+    // Check item pickups
+    for (const player of this.players.values()) {
+      if (!player.alive) continue;
+      const levelInst = this.levels.get(player.level);
+      if (!levelInst) continue;
+      const effects = levelInst.checkPickups(player.x, player.z);
+      for (const eff of effects) {
+        switch (eff.type) {
+          case 'health':
+            player.health = Math.min(100, player.health + (eff.value as number));
+            break;
+          case 'ammo':
+            player.ammo += eff.value as number;
+            break;
+          case 'score':
+            player.score += eff.value as number;
+            break;
+          case 'weapon':
+            player.weapon = Math.max(player.weapon, eff.value as number);
+            player.ammo += 6;
+            break;
+        }
+      }
+    }
+
     // Update enemies per level & handle respawns
     const levelPlayers = new Map<number, PlayerSession[]>();
     for (const player of this.players.values()) {
@@ -387,6 +429,7 @@ export class GameRoom {
         you: player.id,
         players: sameLevelPlayers.map(p => p.toSnapshot()),
         enemies: levelInst ? levelInst.getSnapshots() : [],
+        items: levelInst ? levelInst.getItemSnapshots() : [],
       });
     }
   }
@@ -450,8 +493,8 @@ export class GameRoom {
       if (result && result.health <= 0) {
         const score = SCORE_ENEMY_KILL[result.type] ?? 100;
         player.score += score;
-        // Drop ammo on kill
-        player.ammo += 4;
+        // Drop item from killed enemy
+        levelInst.spawnEnemyDrop(result.type, result.x, result.z);
         this.broadcast({
           type: 'enemy_killed',
           playerId: player.id,

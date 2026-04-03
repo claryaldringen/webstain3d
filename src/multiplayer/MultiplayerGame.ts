@@ -3,6 +3,7 @@ import { KillFeed } from './KillFeed.js';
 import { Scoreboard } from './Scoreboard.js';
 import { RemotePlayerRenderer } from './RemotePlayerRenderer.js';
 import { RemoteEnemyRenderer } from './RemoteEnemyRenderer.js';
+import { RemoteItemRenderer } from './RemoteItemRenderer.js';
 import { MultiplayerUI } from './MultiplayerUI.js';
 import type {
   StateSnapshot,
@@ -46,6 +47,7 @@ export class MultiplayerGame {
   private ui!: MultiplayerUI;
   private weaponOverlay: WeaponOverlay | null = null;
   private remoteEnemies: RemoteEnemyRenderer | null = null;
+  private remoteItems: RemoteItemRenderer | null = null;
   private vswap: VSwapLoader | null = null;
 
   private myId = '';
@@ -229,6 +231,8 @@ export class MultiplayerGame {
 
     if (this.remoteEnemies) this.remoteEnemies.destroy();
     this.remoteEnemies = new RemoteEnemyRenderer(this.renderer.scene, this.vswap);
+    if (this.remoteItems) this.remoteItems.destroy();
+    this.remoteItems = new RemoteItemRenderer(this.renderer.scene, this.vswap);
 
     this.startGameLoop();
   }
@@ -306,6 +310,9 @@ export class MultiplayerGame {
       if (this.remoteEnemies) {
         this.remoteEnemies.update(this.lastSnapshot.enemies, dt);
       }
+      if (this.remoteItems) {
+        this.remoteItems.update(this.lastSnapshot.items);
+      }
     }
 
     // Scoreboard toggle (Tab)
@@ -371,6 +378,7 @@ export class MultiplayerGame {
     this.scoreboard?.destroy();
     this.remotePlayers?.destroy();
     this.remoteEnemies?.destroy();
+    this.remoteItems?.destroy();
     this.weaponOverlay?.destroy();
     this.ui?.destroy();
     this.renderer?.destroy();

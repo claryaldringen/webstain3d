@@ -48,6 +48,13 @@ export interface EnemySnapshot {
   type: string;
 }
 
+export interface ItemSnapshot {
+  id: number;
+  subtype: string;
+  x: number;
+  z: number;
+}
+
 export interface StateSnapshot {
   type: 'snapshot';
   tick: number;
@@ -55,6 +62,7 @@ export interface StateSnapshot {
   you: string; // this player's ID
   players: PlayerSnapshot[];
   enemies: EnemySnapshot[];
+  items: ItemSnapshot[];
 }
 
 export interface WelcomeMessage {
