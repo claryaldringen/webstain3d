@@ -450,6 +450,8 @@ export class GameRoom {
       if (result && result.health <= 0) {
         const score = SCORE_ENEMY_KILL[result.type] ?? 100;
         player.score += score;
+        // Drop ammo on kill
+        player.ammo += 4;
         this.broadcast({
           type: 'enemy_killed',
           playerId: player.id,

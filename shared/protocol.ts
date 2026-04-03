@@ -30,6 +30,7 @@ export interface PlayerSnapshot {
   z: number;
   angle: number;
   health: number;
+  ammo: number;
   alive: boolean;
   weapon: number;
   level: number;

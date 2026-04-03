@@ -344,6 +344,7 @@ export class MultiplayerGame {
     const me = snap.players.find(p => p.id === this.myId);
     if (me) {
       this.health = me.health;
+      this.ammo = me.ammo;
       this.alive = me.alive;
       this.score = me.score;
       this.weapon = me.weapon;

@@ -87,6 +87,7 @@ export class PlayerSession {
       z: this.z,
       angle: this.angle,
       health: this.health,
+      ammo: this.ammo,
       alive: this.alive,
       weapon: this.weapon,
       level: this.level,
