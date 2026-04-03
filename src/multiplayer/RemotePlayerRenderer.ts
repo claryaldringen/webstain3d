@@ -66,10 +66,14 @@ export class RemotePlayerRenderer {
         this.players.set(snap.id, rp);
       }
 
-      // Update interpolation
-      rp.prevSnapshot = { ...rp.lastSnapshot };
-      rp.lastSnapshot = snap;
-      rp.interpTime = 0;
+      // Update interpolation — only when snapshot actually changed
+      const isNewSnap = snap.x !== rp.lastSnapshot.x || snap.z !== rp.lastSnapshot.z ||
+        snap.angle !== rp.lastSnapshot.angle || snap.shooting !== rp.lastSnapshot.shooting;
+      if (isNewSnap) {
+        rp.prevSnapshot = { ...rp.lastSnapshot };
+        rp.lastSnapshot = snap;
+        rp.interpTime = 0;
+      }
 
       // Death transition
       if (!snap.alive && rp.wasAlive) {
