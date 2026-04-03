@@ -92,23 +92,34 @@ function generateServerLevel(seed: number, level: number): {
     }
   }
 
-  // Collect floor tiles
+  // Collect floor tiles and shuffle them
   const floorTiles: { x: number; y: number }[] = [];
   for (let y = 1; y < height - 1; y++) {
     for (let x = 1; x < width - 1; x++) {
       if (walls[y]![x] === 0) floorTiles.push({ x, y });
     }
   }
-
-  // Spawn points spread across the map
-  const spawnPoints: { x: number; y: number }[] = [];
-  const spawnCount = Math.min(8, floorTiles.length);
-  const step = Math.floor(floorTiles.length / spawnCount);
-  for (let i = 0; i < spawnCount; i++) {
-    spawnPoints.push(floorTiles[i * step]!);
+  // Fisher-Yates shuffle
+  for (let i = floorTiles.length - 1; i > 0; i--) {
+    const j = rng.int(0, i);
+    [floorTiles[i], floorTiles[j]] = [floorTiles[j]!, floorTiles[i]!];
   }
 
-  // Place enemies
+  // Spawn points spread across the map (take first N from shuffled)
+  const spawnCount = Math.min(8, floorTiles.length);
+  const spawnPoints = floorTiles.slice(0, spawnCount);
+
+  // Place enemies on remaining tiles, away from spawn points (min 5 tiles)
+  const spawnSet = new Set(spawnPoints.map(s => `${s.x},${s.y}`));
+  const enemyTiles = floorTiles.slice(spawnCount).filter(t => {
+    for (const sp of spawnPoints) {
+      const dx = t.x - sp.x;
+      const dy = t.y - sp.y;
+      if (dx * dx + dy * dy < 25) return false; // min 5 tiles distance
+    }
+    return !spawnSet.has(`${t.x},${t.y}`);
+  });
+
   const enemyTypes: string[] = ['guard', 'dog'];
   if (level >= 2) enemyTypes.push('ss');
   if (level >= 3) enemyTypes.push('mutant');
@@ -116,8 +127,8 @@ function generateServerLevel(seed: number, level: number): {
 
   const enemyCount = 5 + level * 2;
   const enemies: { type: string; x: number; y: number; angle: number }[] = [];
-  for (let i = 0; i < enemyCount && i < floorTiles.length - spawnCount; i++) {
-    const tile = floorTiles[floorTiles.length - 1 - i]!;
+  for (let i = 0; i < enemyCount && i < enemyTiles.length; i++) {
+    const tile = enemyTiles[i]!;
     const type = enemyTypes[rng.int(0, enemyTypes.length - 1)]!;
     enemies.push({ type, x: tile.x, y: tile.y, angle: rng.next() * Math.PI * 2 });
   }
