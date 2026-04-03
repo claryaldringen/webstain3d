@@ -298,7 +298,7 @@ export class MultiplayerGame {
     if (this.lastSnapshot) {
       this.remotePlayers.update(this.lastSnapshot.players, dt);
       if (this.remoteEnemies) {
-        this.remoteEnemies.update(this.lastSnapshot.enemies);
+        this.remoteEnemies.update(this.lastSnapshot.enemies, dt);
       }
     }
 
@@ -342,18 +342,22 @@ export class MultiplayerGame {
       this.score = me.score;
       this.weapon = me.weapon;
 
-      // Reconcile position
+      // Reconcile position — smooth blend to reduce jitter
       const dx = me.x - this.localX;
       const dz = me.z - this.localZ;
       const dist = Math.sqrt(dx * dx + dz * dz);
-      if (dist > 2) {
+      if (dist > 3) {
+        // Teleport — too far off
         this.localX = me.x;
         this.localZ = me.z;
         this.localAngle = me.angle;
-      } else if (dist > 0.5) {
-        this.localX += dx * 0.1;
-        this.localZ += dz * 0.1;
+      } else if (dist > 0.1) {
+        // Gentle blend toward server position
+        const t = 0.15;
+        this.localX += dx * t;
+        this.localZ += dz * t;
       }
+      // Don't override angle — client rotation is authoritative
     }
   }
 
