@@ -59,6 +59,7 @@ export class MultiplayerGame {
   private ammo = 8;
   private score = 0;
   private weapon = 1;
+  private bestWeapon = 1; // best weapon obtained (pistol at start)
   private running = false;
   private animFrameId = 0;
   private lastTime = 0;
@@ -254,15 +255,23 @@ export class MultiplayerGame {
     const movement = this.input.getMovement();
     const interacting = this.input.isInteracting();
 
-    // Weapon switch (1-4 keys)
+    // Weapon switch (1-4 keys) — can switch to any weapon up to bestWeapon
     const weaponSwitch = this.input.weaponSwitch();
-    if (weaponSwitch >= 0 && weaponSwitch <= this.weapon) {
-      this.weapon = weaponSwitch;
+    if (weaponSwitch >= 0 && weaponSwitch <= this.bestWeapon) {
+      // Only switch to ranged weapon if have ammo
+      if (weaponSwitch === 0 || this.ammo > 0) {
+        this.weapon = weaponSwitch;
+      }
     }
 
     // Auto-switch to knife when out of ammo
     if (this.ammo <= 0 && this.weapon > 0) {
       this.weapon = WeaponId.Knife;
+    }
+
+    // Auto-switch back to best weapon when picking up ammo
+    if (this.ammo > 0 && this.weapon === WeaponId.Knife && this.bestWeapon > 0) {
+      this.weapon = this.bestWeapon;
     }
 
     // Can only shoot if: knife (no ammo needed) or have ammo
@@ -370,7 +379,10 @@ export class MultiplayerGame {
       this.ammo = me.ammo;
       this.alive = me.alive;
       this.score = me.score;
-      this.weapon = me.weapon;
+      // Track best weapon from server (weapon pickups)
+      if (me.weapon > this.bestWeapon) {
+        this.bestWeapon = me.weapon;
+      }
 
       // Only hard-snap on large desync (respawn, level change, etc.)
       // Normal movement is fully client-predicted — server/client dt
