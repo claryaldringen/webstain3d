@@ -72,27 +72,26 @@ export function applyMovement(
   const newAngle = angle + rotate * PLAYER_ROTATE_SPEED * dt;
 
   const speed = PLAYER_MOVE_SPEED * (sprint ? PLAYER_SPRINT_MULTIPLIER : 1) * dt;
-  const dx = Math.cos(newAngle) * forward + Math.cos(newAngle + Math.PI / 2) * strafe;
-  const dz = -Math.sin(newAngle) * forward - Math.sin(newAngle + Math.PI / 2) * strafe;
 
-  const len = Math.sqrt(dx * dx + dz * dz);
+  // Match client Player.ts: dirX = -sin(angle), dirZ = -cos(angle)
+  const dirX = -Math.sin(newAngle);
+  const dirZ = -Math.cos(newAngle);
+  const strafeX = Math.cos(newAngle);
+  const strafeZ = -Math.sin(newAngle);
+
+  const dx = (dirX * forward + strafeX * strafe) * speed;
+  const dz = (dirZ * forward + strafeZ * strafe) * speed;
+
   let newX = x;
   let newZ = z;
 
-  if (len > 0) {
-    const mx = (dx / len) * speed;
-    const mz = (dz / len) * speed;
-
-    // Sliding collision
-    const tryX = x + mx;
-    const tryZ = z + mz;
-    const tileXNew = Math.floor(tryX / TILE_SIZE);
-    const tileZOld = Math.floor(z / TILE_SIZE);
-    const tileXOld = Math.floor(x / TILE_SIZE);
-    const tileZNew = Math.floor(tryZ / TILE_SIZE);
-
-    if (!isSolid(tileXNew, tileZOld)) newX = tryX;
-    if (!isSolid(tileXOld, tileZNew)) newZ = tryZ;
+  if (dx !== 0) {
+    const tryX = x + dx;
+    if (!isSolid(Math.floor(tryX / TILE_SIZE), Math.floor(z / TILE_SIZE))) newX = tryX;
+  }
+  if (dz !== 0) {
+    const tryZ = z + dz;
+    if (!isSolid(Math.floor(x / TILE_SIZE), Math.floor(tryZ / TILE_SIZE))) newZ = tryZ;
   }
 
   return { x: newX, z: newZ, angle: newAngle };

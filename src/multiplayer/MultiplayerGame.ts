@@ -15,12 +15,17 @@ import { GameMap } from '../map/GameMap.js';
 import { SpriteManager } from '../sprites/SpriteManager.js';
 import { Input } from '../systems/Input.js';
 import { HUD } from '../rendering/HUD.js';
+import { WeaponOverlay } from '../rendering/WeaponOverlay.js';
+import { drawWeaponSprite, type WeaponName } from '../assets/WeaponSprites.js';
+import { VSwapLoader } from '../assets/VSwapLoader.js';
+import { assetUrl } from '../core/assetUrl.js';
 import {
   TILE_SIZE,
   PLAYER_MOVE_SPEED,
   PLAYER_SPRINT_MULTIPLIER,
   PLAYER_ROTATE_SPEED,
   PLAYER_HEIGHT,
+  WeaponId,
 } from '../core/constants.js';
 
 export class MultiplayerGame {
@@ -36,6 +41,8 @@ export class MultiplayerGame {
   private scoreboard!: Scoreboard;
   private remotePlayers!: RemotePlayerRenderer;
   private ui!: MultiplayerUI;
+  private weaponOverlay: WeaponOverlay | null = null;
+  private vswap: VSwapLoader | null = null;
 
   private myId = '';
   private playerName = '';
@@ -202,6 +209,19 @@ export class MultiplayerGame {
     this.localZ = (serverLevel.playerStart.y + 0.5) * TILE_SIZE;
     this.localAngle = 0;
 
+    // Load weapon overlay
+    if (!this.vswap) {
+      this.vswap = new VSwapLoader();
+      try {
+        await this.vswap.load(assetUrl('assets/VSWAP.WL1'), assetUrl('assets/palette.json'));
+      } catch {
+        this.vswap = null;
+      }
+    }
+    if (this.weaponOverlay) this.weaponOverlay.destroy();
+    this.weaponOverlay = new WeaponOverlay();
+    this.weaponOverlay.initSprites(this.vswap, (name, firing) => drawWeaponSprite(name as WeaponName, firing));
+
     this.startGameLoop();
   }
 
@@ -222,23 +242,27 @@ export class MultiplayerGame {
     const shooting = this.input.isFiring();
     const interacting = this.input.isInteracting();
 
-    // Local prediction: move locally
+    // Local prediction: move locally (same math as Player.ts)
     if (this.alive) {
       const speed = PLAYER_MOVE_SPEED * (movement.sprint ? PLAYER_SPRINT_MULTIPLIER : 1) * dt;
       this.localAngle += movement.rotate * PLAYER_ROTATE_SPEED * dt;
 
-      const dx = Math.cos(this.localAngle) * movement.forward + Math.cos(this.localAngle + Math.PI / 2) * movement.strafe;
-      const dz = -Math.sin(this.localAngle) * movement.forward - Math.sin(this.localAngle + Math.PI / 2) * movement.strafe;
-      const len = Math.sqrt(dx * dx + dz * dz);
+      const dirX = -Math.sin(this.localAngle);
+      const dirZ = -Math.cos(this.localAngle);
+      const strafeX = Math.cos(this.localAngle);
+      const strafeZ = -Math.sin(this.localAngle);
 
-      if (len > 0) {
-        const mx = (dx / len) * speed;
-        const mz = (dz / len) * speed;
-        const tryX = this.localX + mx;
-        const tryZ = this.localZ + mz;
+      const dx = (dirX * movement.forward + strafeX * movement.strafe) * speed;
+      const dz = (dirZ * movement.forward + strafeZ * movement.strafe) * speed;
+
+      if (dx !== 0) {
+        const tryX = this.localX + dx;
         if (!this.map.isSolid(Math.floor(tryX / TILE_SIZE), Math.floor(this.localZ / TILE_SIZE))) {
           this.localX = tryX;
         }
+      }
+      if (dz !== 0) {
+        const tryZ = this.localZ + dz;
         if (!this.map.isSolid(Math.floor(this.localX / TILE_SIZE), Math.floor(tryZ / TILE_SIZE))) {
           this.localZ = tryZ;
         }
@@ -255,9 +279,10 @@ export class MultiplayerGame {
       interact: interacting,
     });
 
-    // Update camera
+    // Update camera (same as singleplayer)
     this.renderer.camera.position.set(this.localX, PLAYER_HEIGHT, this.localZ);
-    this.renderer.camera.rotation.set(0, Math.PI / 2 - this.localAngle, 0, 'YXZ');
+    this.renderer.camera.rotation.order = 'YXZ';
+    this.renderer.camera.rotation.set(0, this.localAngle, 0);
 
     // Update remote players
     if (this.lastSnapshot) {
@@ -275,6 +300,14 @@ export class MultiplayerGame {
 
     // Update kill feed
     this.killFeed.update();
+
+    // Update weapon overlay
+    if (this.weaponOverlay) {
+      if (shooting) this.weaponOverlay.setFiring(true);
+      this.weaponOverlay.setWeapon(this.weapon as WeaponId);
+      this.weaponOverlay.update(dt);
+      this.weaponOverlay.render();
+    }
 
     // Update HUD
     this.hud.updateRaw(this.score, 1, this.health, this.ammo, false, false, this.weapon);
