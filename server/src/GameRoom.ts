@@ -135,6 +135,8 @@ export class GameRoom {
 
     if (this.isEmpty) {
       this.stopTicking();
+      // Reset level instances so reconnecting players get fresh enemies
+      this.levels.clear();
     }
   }
 

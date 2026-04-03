@@ -27,6 +27,8 @@ interface RemotePlayer {
   animFrame: number;
   currentSpriteIdx: number;
   lastWeapon: number;
+  wasAlive: boolean;
+  deathTimer: number;
 }
 
 const INTERP_DURATION = 0.1; // 100ms — smoother than tick rate to avoid jitter
@@ -69,8 +71,22 @@ export class RemotePlayerRenderer {
       rp.lastSnapshot = snap;
       rp.interpTime = 0;
 
-      rp.sprite.visible = snap.alive;
-      rp.label.visible = snap.alive;
+      // Death transition
+      if (!snap.alive && rp.wasAlive) {
+        rp.deathTimer = 0;
+        rp.animFrame = 0;
+      }
+      rp.wasAlive = snap.alive;
+
+      if (!snap.alive) {
+        rp.deathTimer += dt;
+        rp.label.visible = false;
+        // Show death animation for 1s, then hide
+        rp.sprite.visible = rp.deathTimer < 1.0;
+      } else {
+        rp.sprite.visible = true;
+        rp.label.visible = true;
+      }
 
       // Animate
       rp.animTimer += dt;
@@ -110,7 +126,7 @@ export class RemotePlayerRenderer {
 
       // Label follows sprite
       rp.label.position.copy(rp.sprite.position);
-      rp.label.position.y = PLAYER_HEIGHT + 0.6;
+      rp.label.position.y = PLAYER_HEIGHT + 0.7;
     }
   }
 
@@ -124,7 +140,11 @@ export class RemotePlayerRenderer {
       (Math.abs(snap.x - rp.prevSnapshot.x) > 0.01 || Math.abs(snap.z - rp.prevSnapshot.z) > 0.01);
 
     let frameKey: string;
-    if (snap.shooting) {
+    if (!snap.alive) {
+      // Death animation
+      const DEATH_FRAMES = ['die1', 'die2', 'die3', 'dead'];
+      frameKey = DEATH_FRAMES[Math.min(rp.animFrame, DEATH_FRAMES.length - 1)]!;
+    } else if (snap.shooting) {
       frameKey = SHOOT_FRAMES[Math.min(rp.animFrame % SHOOT_FRAMES.length, SHOOT_FRAMES.length - 1)]!;
     } else if (isMoving) {
       frameKey = WALK_FRAMES[rp.animFrame % WALK_FRAMES.length]!;
@@ -175,21 +195,27 @@ export class RemotePlayerRenderer {
     sprite.position.set(snap.x, PLAYER_HEIGHT, snap.z);
     this.scene.add(sprite);
 
-    // Name label
+    // Name label with outline for readability
     const labelCanvas = document.createElement('canvas');
-    labelCanvas.width = 128;
-    labelCanvas.height = 32;
+    labelCanvas.width = 256;
+    labelCanvas.height = 64;
     const lctx = labelCanvas.getContext('2d')!;
-    lctx.fillStyle = '#ffffff';
-    lctx.font = 'bold 20px monospace';
+    lctx.font = 'bold 32px monospace';
     lctx.textAlign = 'center';
-    lctx.fillText(snap.name, 64, 22);
+    lctx.textBaseline = 'middle';
+    // Black outline
+    lctx.strokeStyle = '#000000';
+    lctx.lineWidth = 4;
+    lctx.strokeText(snap.name, 128, 32);
+    // White fill
+    lctx.fillStyle = '#FCFC54';
+    lctx.fillText(snap.name, 128, 32);
 
     const labelTex = new THREE.CanvasTexture(labelCanvas);
     const labelMat = new THREE.SpriteMaterial({ map: labelTex, transparent: true });
     const label = new THREE.Sprite(labelMat);
-    label.scale.set(1, 0.25, 1);
-    label.position.set(snap.x, PLAYER_HEIGHT + 0.6, snap.z);
+    label.scale.set(1.5, 0.4, 1);
+    label.position.set(snap.x, PLAYER_HEIGHT + 0.7, snap.z);
     this.scene.add(label);
 
     return {
@@ -202,6 +228,8 @@ export class RemotePlayerRenderer {
       animFrame: 0,
       currentSpriteIdx: -1,
       lastWeapon: snap.weapon,
+      wasAlive: snap.alive,
+      deathTimer: 0,
     };
   }
 
