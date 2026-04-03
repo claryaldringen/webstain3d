@@ -342,22 +342,17 @@ export class MultiplayerGame {
       this.score = me.score;
       this.weapon = me.weapon;
 
-      // Reconcile position — smooth blend to reduce jitter
+      // Only hard-snap on large desync (respawn, level change, etc.)
+      // Normal movement is fully client-predicted — server/client dt
+      // differences make continuous reconciliation feel like invisible walls
       const dx = me.x - this.localX;
       const dz = me.z - this.localZ;
       const dist = Math.sqrt(dx * dx + dz * dz);
-      if (dist > 3) {
-        // Teleport — too far off
+      if (dist > 5) {
         this.localX = me.x;
         this.localZ = me.z;
         this.localAngle = me.angle;
-      } else if (dist > 0.1) {
-        // Gentle blend toward server position
-        const t = 0.15;
-        this.localX += dx * t;
-        this.localZ += dz * t;
       }
-      // Don't override angle — client rotation is authoritative
     }
   }
 
