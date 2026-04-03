@@ -13,70 +13,34 @@ import type {
   InputMessage,
   LevelConfigData,
 } from '../../shared/protocol.js';
-import { generateLevel } from './levelgen.js';
-import type { LevelConfig } from './levelgen.js';
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 
 const TICK_RATE = 20;
 const TICK_DT = 1 / TICK_RATE;
 const MAX_PLAYERS = 8;
 const TOTAL_LEVELS = 10;
 
-/** Build a LevelConfig matching singleplayer's progressive difficulty. */
-function buildLevelConfig(seed: number, level: number): LevelConfig {
-  const enemyTypes: Record<string, number> = { guard: 3, dog: 1 };
-  if (level >= 2) enemyTypes.ss = 1;
-  if (level >= 3) enemyTypes.mutant = 1;
-  if (level >= 5) enemyTypes.officer = 1;
-  if (level >= 7) { enemyTypes.officer = 2; enemyTypes.ss = 2; }
+// Load pre-generated level data from JSON files (built by tools/prebuild-levels.ts)
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const levelDataDir = join(__dirname, '..', 'data');
 
-  return {
-    style: 'rooms_corridors',
-    seed,
-    enemyCount: [5 + level * 2, 10 + level * 3],
-    enemyTypes,
-    itemDensity: 0.5,
-    doorCount: [2, 4 + level],
-    wallVariety: Math.min(7, 2 + level),
-  };
-}
-
-const ENEMY_TYPES = new Set(['guard', 'dog', 'ss', 'mutant', 'officer', 'boss']);
-
-/** Use the shared LevelGenerator (same as singleplayer) */
-function generateServerLevel(seed: number, level: number): {
-  walls: number[][];
+interface PrebuiltLevel {
+  level: number;
+  seed: number;
   width: number;
   height: number;
+  walls: number[][];
   enemies: { type: string; x: number; y: number; angle: number }[];
   items: { subtype: string; x: number; y: number }[];
-  spawnPoints: { x: number; y: number }[];
+  playerStart: { x: number; y: number };
   exitTile: { x: number; y: number } | null;
-} {
-  const config = buildLevelConfig(seed, level);
-  const data = generateLevel(config);
+}
 
-  // Boss on level 10
-  if (level === TOTAL_LEVELS && data.exitTile) {
-    data.entities.push({ type: 'boss', x: data.exitTile.x, y: data.exitTile.y - 1, angle: 180 });
-  }
-
-  const enemies = data.entities
-    .filter(e => ENEMY_TYPES.has(e.type))
-    .map(e => ({ type: e.type, x: e.x, y: e.y, angle: (e.angle || 0) * Math.PI / 180 }));
-
-  const items = data.entities
-    .filter(e => !ENEMY_TYPES.has(e.type) && e.subtype)
-    .map(e => ({ subtype: e.subtype!, x: e.x, y: e.y }));
-
-  return {
-    walls: data.walls,
-    width: data.width,
-    height: data.height,
-    enemies,
-    items,
-    spawnPoints: [data.playerStart],
-    exitTile: data.exitTile,
-  };
+function loadLevelData(level: number): PrebuiltLevel {
+  const path = join(levelDataDir, `level${level}.json`);
+  return JSON.parse(readFileSync(path, 'utf-8'));
 }
 
 export class GameRoom {
@@ -96,18 +60,17 @@ export class GameRoom {
     this.seed = Date.now();
     this.rng = new SeededRandom(this.seed);
 
-    // Pre-generate all levels and store layout data
+    // Load pre-built levels from JSON
     for (let i = 1; i <= TOTAL_LEVELS; i++) {
-      const levelSeed = this.seed + i * 1000;
-      const data = generateServerLevel(levelSeed, i);
+      const data = loadLevelData(i);
       this.levelConfigs.push({
         level: i,
-        seed: levelSeed,
+        seed: data.seed,
         width: data.width,
         height: data.height,
         walls: data.walls,
         enemies: data.enemies,
-        playerStart: data.spawnPoints[0] || { x: 2, y: 2 },
+        playerStart: data.playerStart,
         exitTile: data.exitTile,
       });
     }
@@ -186,8 +149,7 @@ export class GameRoom {
     let inst = this.levels.get(level);
     if (inst) return inst;
 
-    const config = this.levelConfigs.find(c => c.level === level)!;
-    const data = generateServerLevel(config.seed, level);
+    const data = loadLevelData(level);
     inst = new LevelInstance(level, data.walls, data.width, data.height);
 
     // Add enemies
@@ -255,10 +217,7 @@ export class GameRoom {
 
       // Handle interact (exit tile / level advance)
       if (anyInteract && player.alive && player.level < TOTAL_LEVELS) {
-        const levelData = generateServerLevel(
-          this.levelConfigs[player.level - 1]!.seed,
-          player.level,
-        );
+        const levelData = loadLevelData(player.level);
         if (levelData.exitTile) {
           const px = Math.floor(player.x / TILE_SIZE);
           const pz = Math.floor(player.z / TILE_SIZE);
