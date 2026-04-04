@@ -167,7 +167,9 @@ export class MultiplayerGame {
 
       onLevelChange: (msg) => {
         if (msg.playerId === this.myId) {
-          this.currentLevel = msg.level;
+          this.running = false;
+          cancelAnimationFrame(this.animFrameId);
+          this.initLevel(msg.level);
         }
       },
 
