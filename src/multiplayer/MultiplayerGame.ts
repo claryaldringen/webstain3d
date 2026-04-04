@@ -64,6 +64,7 @@ export class MultiplayerGame {
   private animFrameId = 0;
   private lastTime = 0;
   private inputAccum = 0;
+  private pendingInteract = false;
   private serverUrl: string;
 
   private levelConfigsFromServer: LevelConfigData[] = [];
@@ -255,7 +256,7 @@ export class MultiplayerGame {
 
     // Read input
     const movement = this.input.getMovement();
-    const interacting = this.input.isInteracting();
+    if (this.input.isInteracting()) this.pendingInteract = true;
 
     // Weapon switch (1-4 keys) — can switch to any weapon up to bestWeapon
     const weaponSwitch = this.input.weaponSwitch();
@@ -318,12 +319,13 @@ export class MultiplayerGame {
         rotate: movement.rotate,
         sprint: movement.sprint,
         shoot: shooting,
-        interact: interacting,
+        interact: this.pendingInteract,
         x: this.localX,
         z: this.localZ,
         angle: this.localAngle,
         weapon: this.weapon,
       });
+      this.pendingInteract = false;
     }
 
     // Update camera (same as singleplayer)
