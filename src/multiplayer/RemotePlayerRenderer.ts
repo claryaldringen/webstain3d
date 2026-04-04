@@ -130,7 +130,7 @@ export class RemotePlayerRenderer {
 
       // Label follows sprite
       rp.label.position.copy(rp.sprite.position);
-      rp.label.position.y = PLAYER_HEIGHT + 0.7;
+      rp.label.position.y = PLAYER_HEIGHT + 0.35;
     }
   }
 
@@ -219,7 +219,7 @@ export class RemotePlayerRenderer {
     const labelMat = new THREE.SpriteMaterial({ map: labelTex, transparent: true });
     const label = new THREE.Sprite(labelMat);
     label.scale.set(1.5, 0.4, 1);
-    label.position.set(snap.x, PLAYER_HEIGHT + 0.7, snap.z);
+    label.position.set(snap.x, PLAYER_HEIGHT + 0.35, snap.z);
     this.scene.add(label);
 
     return {
